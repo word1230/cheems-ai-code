@@ -5,6 +5,7 @@ import com.cheems.cheemsaicode.model.dto.user.UserLoginRequest;
 import com.cheems.cheemsaicode.model.vo.LoginUserVO;
 import com.cheems.cheemsaicode.utils.ResultUtils;
 import com.mybatisflex.core.paginate.Page;
+import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -28,11 +29,11 @@ import java.util.List;
 @RequestMapping("/user")
 public class UserController {
 
-    @Autowired
+    @Resource
     private UserService userService;
 
 
-    @PostMapping("/login")
+    @PostMapping(value = "/login")
     public BaseResponse<LoginUserVO> login(@RequestBody UserLoginRequest userLoginRequest,
                                             HttpServletRequest request) {
         String userAccount = userLoginRequest.getUserAccount();

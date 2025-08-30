@@ -1,6 +1,7 @@
 package com.cheems.cheemsaicode.common;
 
 import com.cheems.cheemsaicode.exception.ErrorCode;
+import lombok.Data;
 
 import java.io.Serializable;
 
@@ -8,6 +9,7 @@ import java.io.Serializable;
  * 响应结果封装类
  * @param <T>
  */
+@Data
 public class BaseResponse <T> implements Serializable {
 
     private static final long serialVersionUID = 1L;
