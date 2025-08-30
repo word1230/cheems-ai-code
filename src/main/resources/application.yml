@@ -1,6 +1,8 @@
 spring:
   application:
     name: cheems-ai-code
+  profiles:
+    active: dev
 
 server:
   port: 8123
