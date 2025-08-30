@@ -1,12 +1,15 @@
 package com.cheems.cheemsaicode.service.impl;
 
 import ch.qos.logback.core.util.MD5Util;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.cheems.cheemsaicode.constant.UserConstant;
 import com.cheems.cheemsaicode.exception.BusinessException;
 import com.cheems.cheemsaicode.exception.ErrorCode;
+import com.cheems.cheemsaicode.model.dto.user.UserQueryRequest;
 import com.cheems.cheemsaicode.model.enums.UserRoleEnum;
 import com.cheems.cheemsaicode.model.vo.LoginUserVO;
+import com.cheems.cheemsaicode.model.vo.UserVO;
 import com.cheems.cheemsaicode.utils.ThrowUtils;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -18,6 +21,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *  服务层实现。
@@ -60,7 +66,7 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
     public User getLoginUser(HttpServletRequest request) {
 
       User loginUser = (User)  request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
-      ThrowUtils.throwIf(loginUser==null|| loginUser.getId() == null, ErrorCode.NOT_FOUND_ERROR );
+      ThrowUtils.throwIf(loginUser==null|| loginUser.getId() == null, ErrorCode.NOT_LOGIN_ERROR );
       //从数据库中查询用户信息
         User user = this.getById(loginUser.getId());
       ThrowUtils.throwIf(user==null, ErrorCode.NOT_FOUND_ERROR, "用户不存在");
@@ -123,4 +129,52 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
      request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
      return true;
     }
+
+    @Override
+    public UserVO getUserVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(user, userVO);
+        return userVO;
+    }
+
+    @Override
+    public List<UserVO> getUserVOList(List<User> userList) {
+
+        if (CollUtil.isEmpty(userList)) {
+            return null;
+        }
+
+        List<UserVO> userVOList = userList.stream()
+                .map(this::getUserVO)
+                .toList();
+        return userVOList;
+    }
+
+    @Override
+    public QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest) {
+        if(userQueryRequest==null){
+            return null;
+        }
+        Long id = userQueryRequest.getId();
+        String userName = userQueryRequest.getUserName();
+        String userAccount = userQueryRequest.getUserAccount();
+        String userProfile = userQueryRequest.getUserProfile();
+        String userRole = userQueryRequest.getUserRole();
+        String sortField = userQueryRequest.getSortField();
+        String sortOrder = userQueryRequest.getSortOrder();
+
+
+        return QueryWrapper.create()
+                .eq("id", id)
+                .like("userName", userName)
+                .like("userAccount", userAccount)
+                .like("userProfile", userProfile)
+                .eq("userRole", userRole)
+                .orderBy(sortField,"ascend".equals(sortOrder));
+    }
+
+
 }
