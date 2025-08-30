@@ -5,6 +5,7 @@ import cn.hutool.core.util.StrUtil;
 import com.cheems.cheemsaicode.constant.UserConstant;
 import com.cheems.cheemsaicode.exception.BusinessException;
 import com.cheems.cheemsaicode.exception.ErrorCode;
+import com.cheems.cheemsaicode.model.enums.UserRoleEnum;
 import com.cheems.cheemsaicode.model.vo.LoginUserVO;
 import com.cheems.cheemsaicode.utils.ThrowUtils;
 import com.mybatisflex.core.query.QueryWrapper;
@@ -66,10 +67,41 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
       return user;
     }
 
+    @Override
+    public long userRegister(String userAccount, String userPassword, String checkPassword) {
+
+        //校验参数
+        ThrowUtils.throwIf(StrUtil.isAllBlank(userAccount, userPassword, checkPassword), ErrorCode.PARAMS_ERROR, "账号或密码或确认密码不能为空");
+
+        ThrowUtils.throwIf(userAccount.length() < 4, ErrorCode.PARAMS_ERROR, "账号长度不能小于4");
+        ThrowUtils.throwIf(userPassword.length() < 8, ErrorCode.PARAMS_ERROR, "密码长度不能小于8");
+        ThrowUtils.throwIf(!userPassword.equals(checkPassword), ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
+
+        //校验账号是否重复
+        QueryWrapper queryWrapper = new QueryWrapper();
+        queryWrapper.eq("userAccount", userAccount);
+        long count = this.count(queryWrapper);
+        ThrowUtils.throwIf(count > 0, ErrorCode.PARAMS_ERROR, "账号重复");
+        // 构造请求参数
+
+        String encryPassword = this.getEncryPassword(userPassword);
+        User user = new User();
+        user.setUserAccount(userAccount);
+        user.setUserPassword(encryPassword);
+        user.setUserName("无名");
+        user.setUserRole(UserRoleEnum.USER.getValue());
+
+        //插入
+        boolean save = this.save(user);
+        ThrowUtils.throwIf(!save, ErrorCode.SYSTEM_ERROR, "系统错误");
+        //返回id
+        return user.getId();
+    }
 
 
     public String getEncryPassword(String userPassword){
-        return DigestUtils.md5DigestAsHex(userPassword.getBytes());
+        final String SALT = "cheems";
+        return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
     }
 
 
@@ -81,5 +113,14 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         LoginUserVO loginUserVO = new LoginUserVO();
         BeanUtils.copyProperties(user, loginUserVO);
         return loginUserVO;
+    }
+
+    @Override
+    public boolean userLogout(HttpServletRequest request) {
+
+     User user = (User) request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+     ThrowUtils.throwIf(user==null, ErrorCode.OPERATION_ERROR);
+     request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
+     return true;
     }
 }

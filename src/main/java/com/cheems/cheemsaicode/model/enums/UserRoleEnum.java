@@ -1,6 +1,8 @@
 package com.cheems.cheemsaicode.model.enums;
 
 import cn.hutool.core.util.ObjUtil;
+import com.cheems.cheemsaicode.exception.ErrorCode;
+import com.cheems.cheemsaicode.utils.ThrowUtils;
 import lombok.Getter;
 
 @Getter
@@ -16,6 +18,16 @@ public enum UserRoleEnum {
     UserRoleEnum(String text, String value) {
         this.text = text;
         this.value = value;
+    }
+
+    /**
+     * 拿到更高权限的角色
+     * @param mustRoleEnum
+     * @return
+     */
+    public boolean hasPermission(UserRoleEnum mustRoleEnum) {
+        ThrowUtils.throwIf(mustRoleEnum == null, ErrorCode.PARAMS_ERROR);
+        return this.ordinal() >= mustRoleEnum.ordinal();
     }
 
     /**

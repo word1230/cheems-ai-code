@@ -32,9 +32,22 @@ public interface UserService extends IService<User> {
 
 
     /**
+     * 用户注册
+     * @param userAccount
+     * @param userPassword
+     * @param checkPassword
+     * @return
+     */
+    long userRegister(String userAccount, String userPassword, String checkPassword);
+
+
+    /**
      * 获取用户脱敏信息
      * @param user
      * @return
      */
     LoginUserVO getLoginUserVO(User user);
+
+
+    boolean userLogout(HttpServletRequest request);
 }
