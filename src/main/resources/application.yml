@@ -1,0 +1,23 @@
+spring:
+  application:
+    name: cheems-ai-code
+
+server:
+  port: 8123
+  servlet:
+    context-path: /api
+
+
+# springdoc-openapi????
+springdoc:
+  api-docs:
+    path: /v3/api-docs
+  group-configs:
+    - group: 'default'
+      paths-to-match: '/**'
+      packages-to-scan: com.cheems.cheemsaicode.controller
+# knife4j???????????????
+knife4j:
+  enable: true
+  setting:
+    language: zh_cn
