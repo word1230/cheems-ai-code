@@ -1,11 +1,15 @@
 package com.cheems.cheemsaicode.service.impl;
 
 import ch.qos.logback.core.util.MD5Util;
+import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.util.StrUtil;
 import com.cheems.cheemsaicode.constant.UserConstant;
 import com.cheems.cheemsaicode.exception.BusinessException;
 import com.cheems.cheemsaicode.exception.ErrorCode;
+import com.cheems.cheemsaicode.model.dto.user.UserQueryRequest;
+import com.cheems.cheemsaicode.model.enums.UserRoleEnum;
 import com.cheems.cheemsaicode.model.vo.LoginUserVO;
+import com.cheems.cheemsaicode.model.vo.UserVO;
 import com.cheems.cheemsaicode.utils.ThrowUtils;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -17,6 +21,9 @@ import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.beans.BeanUtils;
 import org.springframework.stereotype.Service;
 import org.springframework.util.DigestUtils;
+
+import java.util.List;
+import java.util.stream.Collectors;
 
 /**
  *  服务层实现。
@@ -59,17 +66,48 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
     public User getLoginUser(HttpServletRequest request) {
 
       User loginUser = (User)  request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
-      ThrowUtils.throwIf(loginUser==null|| loginUser.getId() == null, ErrorCode.NOT_FOUND_ERROR );
+      ThrowUtils.throwIf(loginUser==null|| loginUser.getId() == null, ErrorCode.NOT_LOGIN_ERROR );
       //从数据库中查询用户信息
         User user = this.getById(loginUser.getId());
       ThrowUtils.throwIf(user==null, ErrorCode.NOT_FOUND_ERROR, "用户不存在");
       return user;
     }
 
+    @Override
+    public long userRegister(String userAccount, String userPassword, String checkPassword) {
+
+        //校验参数
+        ThrowUtils.throwIf(StrUtil.isAllBlank(userAccount, userPassword, checkPassword), ErrorCode.PARAMS_ERROR, "账号或密码或确认密码不能为空");
+
+        ThrowUtils.throwIf(userAccount.length() < 4, ErrorCode.PARAMS_ERROR, "账号长度不能小于4");
+        ThrowUtils.throwIf(userPassword.length() < 8, ErrorCode.PARAMS_ERROR, "密码长度不能小于8");
+        ThrowUtils.throwIf(!userPassword.equals(checkPassword), ErrorCode.PARAMS_ERROR, "两次输入的密码不一致");
+
+        //校验账号是否重复
+        QueryWrapper queryWrapper = new QueryWrapper();
+        queryWrapper.eq("userAccount", userAccount);
+        long count = this.count(queryWrapper);
+        ThrowUtils.throwIf(count > 0, ErrorCode.PARAMS_ERROR, "账号重复");
+        // 构造请求参数
+
+        String encryPassword = this.getEncryPassword(userPassword);
+        User user = new User();
+        user.setUserAccount(userAccount);
+        user.setUserPassword(encryPassword);
+        user.setUserName("无名");
+        user.setUserRole(UserRoleEnum.USER.getValue());
+
+        //插入
+        boolean save = this.save(user);
+        ThrowUtils.throwIf(!save, ErrorCode.SYSTEM_ERROR, "系统错误");
+        //返回id
+        return user.getId();
+    }
 
 
     public String getEncryPassword(String userPassword){
-        return DigestUtils.md5DigestAsHex(userPassword.getBytes());
+        final String SALT = "cheems";
+        return DigestUtils.md5DigestAsHex((SALT + userPassword).getBytes());
     }
 
 
@@ -82,4 +120,61 @@ public class UserServiceImpl extends ServiceImpl<UserMapper, User>  implements U
         BeanUtils.copyProperties(user, loginUserVO);
         return loginUserVO;
     }
+
+    @Override
+    public boolean userLogout(HttpServletRequest request) {
+
+     User user = (User) request.getSession().getAttribute(UserConstant.USER_LOGIN_STATE);
+     ThrowUtils.throwIf(user==null, ErrorCode.OPERATION_ERROR);
+     request.getSession().removeAttribute(UserConstant.USER_LOGIN_STATE);
+     return true;
+    }
+
+    @Override
+    public UserVO getUserVO(User user) {
+        if (user == null) {
+            return null;
+        }
+        UserVO userVO = new UserVO();
+        BeanUtils.copyProperties(user, userVO);
+        return userVO;
+    }
+
+    @Override
+    public List<UserVO> getUserVOList(List<User> userList) {
+
+        if (CollUtil.isEmpty(userList)) {
+            return null;
+        }
+
+        List<UserVO> userVOList = userList.stream()
+                .map(this::getUserVO)
+                .toList();
+        return userVOList;
+    }
+
+    @Override
+    public QueryWrapper getQueryWrapper(UserQueryRequest userQueryRequest) {
+        if(userQueryRequest==null){
+            return null;
+        }
+        Long id = userQueryRequest.getId();
+        String userName = userQueryRequest.getUserName();
+        String userAccount = userQueryRequest.getUserAccount();
+        String userProfile = userQueryRequest.getUserProfile();
+        String userRole = userQueryRequest.getUserRole();
+        String sortField = userQueryRequest.getSortField();
+        String sortOrder = userQueryRequest.getSortOrder();
+
+
+        return QueryWrapper.create()
+                .eq("id", id)
+                .like("userName", userName)
+                .like("userAccount", userAccount)
+                .like("userProfile", userProfile)
+                .eq("userRole", userRole)
+                .orderBy(sortField,"ascend".equals(sortOrder));
+    }
+
+
 }
