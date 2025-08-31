@@ -5,8 +5,10 @@ import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
+import reactor.core.publisher.Flux;
 
 import java.io.File;
+import java.util.List;
 
 import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
@@ -24,5 +26,24 @@ class AICodeGeneratorFacadeTest {
     void generateMultiFileSaveCode(){
         File file = facade.generateAndSaveCode("做一个代办工具,风格赛博朋克", AIGenTypeEnum.MULTI_FILE);
         Assertions.assertNotNull(file);
+    }
+
+    @Test
+    void generateAndSaveCodeStream() {
+        Flux<String> codeStream = facade.generateAndSaveCodeStream("做一个代办工具", AIGenTypeEnum.HTML);
+        List<String> result = codeStream.collectList().block();
+        Assertions.assertNotNull(result);
+        String join = String.join("", result);
+        Assertions.assertNotNull(join);
+    }
+
+
+    @Test
+    void generateMultiFileAndSaveCodeStream() {
+        Flux<String> codeStream = facade.generateAndSaveCodeStream("做一个代办工具", AIGenTypeEnum.MULTI_FILE);
+        List<String> result = codeStream.collectList().block();
+        Assertions.assertNotNull(result);
+        String join = String.join("", result);
+        Assertions.assertNotNull(join);
     }
 }
