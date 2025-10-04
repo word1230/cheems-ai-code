@@ -2,12 +2,18 @@ spring:
   application:
     name: cheems-ai-code
   profiles:
-    active: dev
+    active: local
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://localhost:3306/cheems-ai-code
+    username: root
+    password: 123456
 
 server:
   port: 8123
   servlet:
     context-path: /api
+
 
 
 # springdoc-openapi????

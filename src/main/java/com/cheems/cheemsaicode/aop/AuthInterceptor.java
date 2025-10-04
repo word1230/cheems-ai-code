@@ -35,12 +35,12 @@ public class AuthInterceptor {
         // 拿到当前用户的权限
         String userRole = loginUser.getUserRole();
         UserRoleEnum userRoleEnum = UserRoleEnum.getEnumByValue(userRole);
-        ThrowUtils.throwIf(userRoleEnum == null , ErrorCode.OPERATION_ERROR);
+        ThrowUtils.throwIf(userRoleEnum == null , ErrorCode.OPERATION_ERROR, "用户权限不存在");
         // 与方法注解中的权限进行对比，
         String mustRole = authCheck.mustRole();
         UserRoleEnum mustRoleEnum= UserRoleEnum.getEnumByValue(mustRole);
-        ThrowUtils.throwIf(mustRoleEnum == null , ErrorCode.PARAMS_ERROR);
-        ThrowUtils.throwIf(!userRoleEnum.hasPermission(mustRoleEnum), ErrorCode.NO_AUTH_ERROR);
+        ThrowUtils.throwIf(mustRoleEnum == null , ErrorCode.PARAMS_ERROR, "权限不存在");
+        ThrowUtils.throwIf(!userRoleEnum.hasPermission(mustRoleEnum), ErrorCode.NO_AUTH_ERROR, "无权限");
         return  joinPoint.proceed();
 
 
