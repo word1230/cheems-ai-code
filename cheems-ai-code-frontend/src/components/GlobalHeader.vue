@@ -1,7 +1,7 @@
 <template>
   <a-layout-header class="header">
     <div class="header-left">
-      <img src="@/assets/logo.svg" alt="Logo" class="logo" />
+      <img src="@/assets/logo.png" alt="Logo" class="logo" />
       <span class="title">Cheems AI Code</span>
     </div>
     <a-menu

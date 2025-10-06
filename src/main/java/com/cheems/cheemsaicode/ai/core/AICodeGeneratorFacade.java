@@ -2,6 +2,8 @@ package com.cheems.cheemsaicode.ai.core;
 
 import cn.hutool.captcha.generator.CodeGenerator;
 import com.cheems.cheemsaicode.ai.AICodeGeneratorService;
+import com.cheems.cheemsaicode.ai.core.parser.CodeParserExecutor;
+import com.cheems.cheemsaicode.ai.core.saver.CodeFileSaverExecutor;
 import com.cheems.cheemsaicode.ai.model.HtmlCodeResult;
 import com.cheems.cheemsaicode.ai.model.MultiFileCodeResult;
 import com.cheems.cheemsaicode.ai.model.enums.AIGenTypeEnum;
@@ -33,15 +35,21 @@ public class AICodeGeneratorFacade {
      * 单html模式调用ai， 将生成文件写入到磁盘
      */
     public File generateAndSaveCode(String userMessage, AIGenTypeEnum genTypeEnum) {
-       // 校验参数
-        ThrowUtils.throwIf(genTypeEnum == null , ErrorCode.SYSTEM_ERROR,"生成类型为空");
+        // 校验参数
+        ThrowUtils.throwIf(genTypeEnum == null, ErrorCode.SYSTEM_ERROR, "生成类型为空");
 
-        return  switch (genTypeEnum){
-            case HTML -> generateHtmlCode(userMessage);
-            case MULTI_FILE -> generateMultiFileCode(userMessage);
+        return switch (genTypeEnum) {
+            case HTML -> {
+                HtmlCodeResult htmlCodeResult = aiCodeGeneratorService.generateHtmlCode(userMessage);
+                yield  CodeFileSaverExecutor.saveFiles(htmlCodeResult, HTML);
+            }
+            case MULTI_FILE -> {
+                MultiFileCodeResult multiFileCodeResult = aiCodeGeneratorService.generateMultiFileCode(userMessage);
+                yield  CodeFileSaverExecutor.saveFiles(multiFileCodeResult, MULTI_FILE);
+            }
             default -> {
-                String errorMsg = "不支持生成的类型"+ genTypeEnum.getValue();
-                throw new BusinessException(ErrorCode.SYSTEM_ERROR,errorMsg);
+                String errorMsg = "不支持生成的类型" + genTypeEnum.getValue();
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, errorMsg);
             }
         };
 
@@ -52,71 +60,52 @@ public class AICodeGeneratorFacade {
      */
     public Flux<String> generateAndSaveCodeStream(String userMessage, AIGenTypeEnum genTypeEnum) {
         // 校验参数
-        ThrowUtils.throwIf(genTypeEnum == null , ErrorCode.SYSTEM_ERROR,"生成类型为空");
+        ThrowUtils.throwIf(genTypeEnum == null, ErrorCode.SYSTEM_ERROR, "生成类型为空");
 
-        return  switch (genTypeEnum){
-            case HTML -> generateHtmlCodeStream(userMessage);
-            case MULTI_FILE -> generateMultiFileCodeStream(userMessage);
+        return switch (genTypeEnum) {
+            case HTML -> {
+                Flux<String> result = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);
+                yield  processCodeStream(result, HTML);
+            }
+            case MULTI_FILE -> {
+                Flux<String> result = aiCodeGeneratorService.generateMultiFileCodeStream(userMessage);
+                yield  processCodeStream(result, MULTI_FILE);
+            }
             default -> {
-                String errorMsg = "不支持生成的类型"+ genTypeEnum.getValue();
-                throw new BusinessException(ErrorCode.SYSTEM_ERROR,errorMsg);
+                String errorMsg = "不支持生成的类型" + genTypeEnum.getValue();
+                throw new BusinessException(ErrorCode.SYSTEM_ERROR, errorMsg);
             }
         };
 
     }
 
-    private Flux<String> generateMultiFileCodeStream(String userMessage) {
-        Flux<String> result = aiCodeGeneratorService.generateMultiFileCodeStream(userMessage);
 
-        //当流式返回生成代码 完成后，再保存代码
+    private Flux<String> processCodeStream(Flux<String> codeStream, AIGenTypeEnum genType) {
+
         StringBuilder codeBuilder = new StringBuilder();
-        return result
-                .doOnNext(chunk -> {
-                    codeBuilder.append(chunk);
-                })
-                .doOnComplete(()->{
-                    try{
-                        String completeCode = codeBuilder.toString();
-                        MultiFileCodeResult multiFileCodeResult = CodeParser.parseMultiFileCode(completeCode);
-                        File file = CodeFileSaver.saveMultiFileCodeResult(multiFileCodeResult);
+        return codeStream
+                .doOnNext(codeBuilder::append)
+                .doOnComplete(() -> {
+                    try {
+                        Object parseCode = CodeParserExecutor.parseCode(codeBuilder.toString(), HTML);
+                        File file = CodeFileSaverExecutor.saveFiles(parseCode, HTML);
                         log.info("保存成功：路径为：" + file.getAbsolutePath());
-                    }catch (Exception e){
+                    } catch (Exception e) {
                         log.error("保存失败： {}", e.getMessage());
                     }
                 });
     }
 
-    private Flux<String> generateHtmlCodeStream(String userMessage) {
-        Flux<String> result = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);
-        StringBuilder codeBuilder = new StringBuilder();
-        return result
-                .doOnNext(chunk -> {
-                    codeBuilder.append(chunk);
-                })
-                .doOnComplete(()->{
-                    try{
-                    HtmlCodeResult htmlCodeResult = CodeParser.parseHtmlCode(codeBuilder.toString());
-                    File file = CodeFileSaver.saveHtmlCodeResult(htmlCodeResult);
-                    log.info("保存成功：路径为：" + file.getAbsolutePath());
-                         }catch (Exception e){
-                        log.error("保存失败： {}", e.getMessage());
-                     }
-                });
-
-
-
-    }
-
 
     private File generateHtmlCode(String userMessage) {
         HtmlCodeResult htmlCodeResult = aiCodeGeneratorService.generateHtmlCode(userMessage);
-        return  CodeFileSaver.saveHtmlCodeResult(htmlCodeResult);
-    }
-    private File generateMultiFileCode(String userMessage) {
-        MultiFileCodeResult multiFileCodeResult = aiCodeGeneratorService.generateMultiFileCode(userMessage);
-        return  CodeFileSaver.saveMultiFileCodeResult(multiFileCodeResult);
+        return CodeFileSaver.saveHtmlCodeResult(htmlCodeResult);
     }
 
+    private File generateMultiFileCode(String userMessage) {
+        MultiFileCodeResult multiFileCodeResult = aiCodeGeneratorService.generateMultiFileCode(userMessage);
+        return CodeFileSaver.saveMultiFileCodeResult(multiFileCodeResult);
+    }
 
 
 }
