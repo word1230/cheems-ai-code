@@ -17,8 +17,7 @@ import reactor.core.publisher.Flux;
 
 import java.io.File;
 
-import static com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum.MULTI_FILE;
-import static com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum.HTML;
+import static com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum.*;
 
 /**
  * ai生成代码门面类
@@ -38,7 +37,7 @@ public class AICodeGeneratorFacade {
         // 校验参数
         ThrowUtils.throwIf(genTypeEnum == null, ErrorCode.SYSTEM_ERROR, "生成类型为空");
 
-        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
+        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId,genTypeEnum );
 
         return switch (genTypeEnum) {
             case HTML -> {
@@ -63,7 +62,7 @@ public class AICodeGeneratorFacade {
     public Flux<String> generateAndSaveCodeStream(String userMessage, CodeGenTypeEnum genTypeEnum, Long appId) {
         // 校验参数
         ThrowUtils.throwIf(genTypeEnum == null, ErrorCode.SYSTEM_ERROR, "生成类型为空");
-        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
+        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId,genTypeEnum);
 
 
         return switch (genTypeEnum) {
@@ -73,6 +72,10 @@ public class AICodeGeneratorFacade {
             }
             case MULTI_FILE -> {
                 Flux<String> result = aiCodeGeneratorService.generateMultiFileCodeStream(userMessage);
+                yield  processCodeStream(result, MULTI_FILE,appId);
+            }
+            case VUE_PROJECT -> {
+                Flux<String> result = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
                 yield  processCodeStream(result, MULTI_FILE,appId);
             }
             default -> {
@@ -91,8 +94,8 @@ public class AICodeGeneratorFacade {
                 .doOnNext(codeBuilder::append)
                 .doOnComplete(() -> {
                     try {
-                        Object parseCode = CodeParserExecutor.parseCode(codeBuilder.toString(), HTML);
-                        File file = CodeFileSaverExecutor.saveFiles(parseCode, HTML,appId);
+                        Object parseCode = CodeParserExecutor.parseCode(codeBuilder.toString(), genType);
+                        File file = CodeFileSaverExecutor.saveFiles(parseCode, genType,appId);
                         log.info("保存成功：路径为：" + file.getAbsolutePath());
                     } catch (Exception e) {
                         log.error("保存失败： {}", e.getMessage());

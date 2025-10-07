@@ -115,11 +115,13 @@
           </a-button>
         </div>
         <div class="preview-content">
-          <iframe 
-            v-if="previewUrl" 
-            :src="previewUrl" 
+          <iframe
+            v-if="previewUrl"
+            :src="previewUrl"
             frameborder="0"
             class="preview-iframe"
+            :key="iframeKey"
+            @load="handleIframeLoad"
           ></iframe>
           <a-empty v-else description="等待生成完成后展示" />
         </div>
@@ -272,6 +274,7 @@ const userMessage = ref('')
 const generating = ref(false)
 const deploying = ref(false)
 const previewUrl = ref('')
+const iframeKey = ref(0) // 用于强制重新加载iframe
 const messagesContainer = ref<HTMLElement>()
 const isOwner = ref(true)
 const showDetailModal = ref(false)
@@ -327,7 +330,8 @@ const loadChatHistory = async (isLoadMore = false) => {
 
       // 首次加载完成后，检查是否需要展示网站
       if (!isLoadMore && totalHistory.value >= 2 && appInfo.value?.codeGenType && appInfo.value?.id) {
-        previewUrl.value = `http://localhost:8123/api/static/${appInfo.value.codeGenType}_${appInfo.value.id}/`
+        iframeKey.value += 1
+        previewUrl.value = `http://localhost:8123/api/static/${appInfo.value.codeGenType}_${appInfo.value.id}/?t=${Date.now()}`
       }
     }
   } catch (error) {
@@ -476,7 +480,9 @@ const generateCode = async (prompt: string) => {
 
     // 生成完成后显示预览
     if (appInfo.value?.codeGenType && appInfo.value?.id) {
-      previewUrl.value = `http://localhost:8123/api/static/${appInfo.value.codeGenType}_${appInfo.value.id}/`
+      // 强制重新加载iframe
+      iframeKey.value += 1
+      previewUrl.value = `http://localhost:8123/api/static/${appInfo.value.codeGenType}_${appInfo.value.id}/?t=${Date.now()}`
     }
   } catch (error) {
     message.error('生成失败，请重试')
@@ -613,6 +619,11 @@ const handleDelete = async () => {
   } catch (error) {
     message.error('删除失败')
   }
+}
+
+// iframe加载完成处理
+const handleIframeLoad = () => {
+  // 可以在这里添加加载完成的处理逻辑
 }
 
 onMounted(() => {

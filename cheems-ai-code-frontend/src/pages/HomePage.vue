@@ -102,7 +102,7 @@ const handleCreateApp = async () => {
     const res = await addApp({
       appName: userPrompt.value.substring(0, 20),
       initPrompt: userPrompt.value,
-      codeGenType: 'html',
+      codeGenType: 'multi_file',
     })
 
     if (res.data.code === 0 && res.data.data) {
