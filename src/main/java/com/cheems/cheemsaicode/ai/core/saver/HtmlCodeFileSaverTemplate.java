@@ -1,17 +1,15 @@
 package com.cheems.cheemsaicode.ai.core.saver;
 
 import com.cheems.cheemsaicode.ai.model.HtmlCodeResult;
-import com.cheems.cheemsaicode.ai.model.enums.AIGenTypeEnum;
+import com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum;
 import com.cheems.cheemsaicode.exception.BusinessException;
 import com.cheems.cheemsaicode.exception.ErrorCode;
 import opennlp.tools.util.StringUtil;
 
-import java.io.File;
-
 public class HtmlCodeFileSaverTemplate extends CodeFIleSaverTemplate<HtmlCodeResult>{
     @Override
-    public AIGenTypeEnum getAIGenType() {
-        return AIGenTypeEnum.HTML;
+    public CodeGenTypeEnum getAIGenType() {
+        return CodeGenTypeEnum.HTML;
     }
 
     @Override

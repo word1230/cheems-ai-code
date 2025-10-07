@@ -1,17 +1,15 @@
 package com.cheems.cheemsaicode.ai.core.saver;
 
 import com.cheems.cheemsaicode.ai.model.MultiFileCodeResult;
-import com.cheems.cheemsaicode.ai.model.enums.AIGenTypeEnum;
+import com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum;
 import com.cheems.cheemsaicode.exception.BusinessException;
 import com.cheems.cheemsaicode.exception.ErrorCode;
 import opennlp.tools.util.StringUtil;
 
-import java.io.File;
-
 public class MultiFIleCodeFIleSaverTemplate extends  CodeFIleSaverTemplate<MultiFileCodeResult>{
     @Override
-    public AIGenTypeEnum getAIGenType() {
-        return AIGenTypeEnum.MULTI_FILE;
+    public CodeGenTypeEnum getAIGenType() {
+        return CodeGenTypeEnum.MULTI_FILE;
     }
 
     @Override

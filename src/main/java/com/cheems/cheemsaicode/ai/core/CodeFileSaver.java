@@ -5,7 +5,7 @@ import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
 import com.cheems.cheemsaicode.ai.model.HtmlCodeResult;
 import com.cheems.cheemsaicode.ai.model.MultiFileCodeResult;
-import com.cheems.cheemsaicode.ai.model.enums.AIGenTypeEnum;
+import com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum;
 
 import  java.io.File;
 import java.nio.charset.StandardCharsets;
@@ -23,7 +23,7 @@ public class CodeFileSaver {
      * 保存htmlCOdeResult
      */
     public static File saveHtmlCodeResult(HtmlCodeResult htmlCodeResult){
-        String baseDirPath = buildUniqueDir(AIGenTypeEnum.HTML.getValue());
+        String baseDirPath = buildUniqueDir(CodeGenTypeEnum.HTML.getValue());
         writeToFile(baseDirPath,"index.html",htmlCodeResult.getHtmlCode());
         return  new File(baseDirPath);
     }
@@ -36,7 +36,7 @@ public class CodeFileSaver {
      */
 
     public static File saveMultiFileCodeResult(MultiFileCodeResult multiFileCodeResult){
-        String baseDir = buildUniqueDir(AIGenTypeEnum.MULTI_FILE.getValue());
+        String baseDir = buildUniqueDir(CodeGenTypeEnum.MULTI_FILE.getValue());
         writeToFile(baseDir,"index.html",multiFileCodeResult.getHtmlCode());
         writeToFile(baseDir,"style.css",multiFileCodeResult.getCssCode());
         writeToFile(baseDir,"script.js",multiFileCodeResult.getJavascriptCode());

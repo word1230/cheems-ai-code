@@ -1,9 +1,9 @@
 package com.cheems.cheemsaicode.ai.core.saver;
 
 import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.IdUtil;
 import cn.hutool.core.util.StrUtil;
-import com.cheems.cheemsaicode.ai.model.enums.AIGenTypeEnum;
+import com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum;
+import com.cheems.cheemsaicode.constant.AppConstant;
 import com.cheems.cheemsaicode.exception.BusinessException;
 import com.cheems.cheemsaicode.exception.ErrorCode;
 
@@ -14,14 +14,16 @@ public abstract class CodeFIleSaverTemplate<T> {
 
 
     //文件保存目录
-    private  static  final String FILE_SAVE_ROOT_DIR = System.getProperty("user.dir")+"/tmp/code_output";
+    // 文件保存根目录
+    protected static final String FILE_SAVE_ROOT_DIR = AppConstant.CODE_OUTPUT_ROOT_DIR;
 
-    public final File saveCode(T result){
+
+    public final File saveCode(T result,Long appId){
         //1. 校验参数
         validateInput(result);
 
         // 2. 创建 目录
-        String path = buildUniqueDir();
+        String path = buildUniqueDir(appId);
 
         //3. 保存到文件
         saveFiles(result, path);
@@ -35,15 +37,15 @@ public abstract class CodeFIleSaverTemplate<T> {
      * 创建目录
      * @return
      */
-    private    String buildUniqueDir(){
-        AIGenTypeEnum aiGenType = getAIGenType();
-        String uniqueDir = StrUtil.format("{}_{}",aiGenType.getValue(), IdUtil.getSnowflakeNextIdStr());
+    private    String buildUniqueDir(Long appId){
+        CodeGenTypeEnum aiGenType = getAIGenType();
+        String uniqueDir = StrUtil.format("{}_{}",aiGenType.getValue(), appId);
         String dirPath = FILE_SAVE_ROOT_DIR + File.separator + uniqueDir;
         FileUtil.mkdir(dirPath);
         return dirPath;
     }
 
-    public abstract AIGenTypeEnum getAIGenType();
+    public abstract CodeGenTypeEnum getAIGenType();
 
 
     protected void validateInput(T result){

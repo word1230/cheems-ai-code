@@ -1,6 +1,6 @@
 package com.cheems.cheemsaicode.ai.core;
 
-import com.cheems.cheemsaicode.ai.model.enums.AIGenTypeEnum;
+import com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum;
 import jakarta.annotation.Resource;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.Test;
@@ -10,7 +10,6 @@ import reactor.core.publisher.Flux;
 import java.io.File;
 import java.util.List;
 
-import static org.junit.jupiter.api.Assertions.*;
 @SpringBootTest
 class AICodeGeneratorFacadeTest {
 
@@ -19,18 +18,18 @@ class AICodeGeneratorFacadeTest {
 
     @Test
     void generateAndSaveCode() {
-        File file = facade.generateAndSaveCode("做一个代办工具", AIGenTypeEnum.HTML);
+        File file = facade.generateAndSaveCode("做一个代办工具", CodeGenTypeEnum.HTML,1L);
         Assertions.assertNotNull(file);
     }
     @Test
     void generateMultiFileSaveCode(){
-        File file = facade.generateAndSaveCode("做一个代办工具,风格赛博朋克", AIGenTypeEnum.MULTI_FILE);
+        File file = facade.generateAndSaveCode("做一个代办工具,风格赛博朋克", CodeGenTypeEnum.MULTI_FILE,1L);
         Assertions.assertNotNull(file);
     }
 
     @Test
     void generateAndSaveCodeStream() {
-        Flux<String> codeStream = facade.generateAndSaveCodeStream("做一个代办工具", AIGenTypeEnum.HTML);
+        Flux<String> codeStream = facade.generateAndSaveCodeStream("做一个代办工具", CodeGenTypeEnum.HTML,1L);
         List<String> result = codeStream.collectList().block();
         Assertions.assertNotNull(result);
         String join = String.join("", result);
@@ -40,7 +39,7 @@ class AICodeGeneratorFacadeTest {
 
     @Test
     void generateMultiFileAndSaveCodeStream() {
-        Flux<String> codeStream = facade.generateAndSaveCodeStream("做一个代办工具", AIGenTypeEnum.MULTI_FILE);
+        Flux<String> codeStream = facade.generateAndSaveCodeStream("做一个代办工具", CodeGenTypeEnum.MULTI_FILE,1L);
         List<String> result = codeStream.collectList().block();
         Assertions.assertNotNull(result);
         String join = String.join("", result);
