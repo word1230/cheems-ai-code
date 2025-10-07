@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(dir:*)",
+      "Read(//d/projects/cheems-ai-code/src/main/java/com/cheems/cheemsaicode/controller/**)",
+      "Read(//d/projects/cheems-ai-code/src/main/java/com/cheems/cheemsaicode/model/entity/**)",
+      "Read(//d/projects/cheems-ai-code/src/main/java/com/cheems/cheemsaicode/model/dto/chathistory/**)",
+      "Read(//d/projects/cheems-ai-code/src/main/java/com/cheems/cheemsaicode/service/**)"
+    ],
+    "deny": [],
+    "ask": []
+  }
+}

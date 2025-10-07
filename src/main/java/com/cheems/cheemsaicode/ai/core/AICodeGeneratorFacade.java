@@ -1,6 +1,7 @@
 package com.cheems.cheemsaicode.ai.core;
 
 import com.cheems.cheemsaicode.ai.AICodeGeneratorService;
+import com.cheems.cheemsaicode.ai.AiCodeGeneratorServiceFactory;
 import com.cheems.cheemsaicode.ai.core.parser.CodeParserExecutor;
 import com.cheems.cheemsaicode.ai.core.saver.CodeFileSaverExecutor;
 import com.cheems.cheemsaicode.ai.model.HtmlCodeResult;
@@ -27,7 +28,7 @@ import static com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum.HTML;
 public class AICodeGeneratorFacade {
 
     @Resource
-    private AICodeGeneratorService aiCodeGeneratorService;
+    private AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
 
 
     /**
@@ -36,6 +37,8 @@ public class AICodeGeneratorFacade {
     public File generateAndSaveCode(String userMessage, CodeGenTypeEnum genTypeEnum, Long appId) {
         // 校验参数
         ThrowUtils.throwIf(genTypeEnum == null, ErrorCode.SYSTEM_ERROR, "生成类型为空");
+
+        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
 
         return switch (genTypeEnum) {
             case HTML -> {
@@ -60,6 +63,8 @@ public class AICodeGeneratorFacade {
     public Flux<String> generateAndSaveCodeStream(String userMessage, CodeGenTypeEnum genTypeEnum, Long appId) {
         // 校验参数
         ThrowUtils.throwIf(genTypeEnum == null, ErrorCode.SYSTEM_ERROR, "生成类型为空");
+        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId);
+
 
         return switch (genTypeEnum) {
             case HTML -> {

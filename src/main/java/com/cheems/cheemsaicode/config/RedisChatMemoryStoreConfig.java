@@ -1,11 +1,14 @@
 package com.cheems.cheemsaicode.config;
 
+import dev.langchain4j.community.store.memory.chat.redis.RedisChatMemoryStore;
 import lombok.Builder;
 import lombok.Data;
 import org.springframework.boot.context.properties.ConfigurationProperties;
+import org.springframework.context.annotation.Bean;
+import org.springframework.context.annotation.Configuration;
 
 @Data
-@Builder
+@Configuration
 @ConfigurationProperties(prefix = "spring.data.redis")
 public class RedisChatMemoryStoreConfig {
 
@@ -18,8 +21,9 @@ public class RedisChatMemoryStoreConfig {
 
     private Long ttl;
 
-    public RedisChatMemoryStoreConfig redisChatMemoryStore(String host, int port, String password, Long ttl) {
-        return RedisChatMemoryStoreConfig.builder()
+    @Bean
+   public RedisChatMemoryStore redisChatMemoryStore(){
+        return RedisChatMemoryStore.builder()
                 .host(host)
                 .port(port)
                 .password(password)

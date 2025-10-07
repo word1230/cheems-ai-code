@@ -13,11 +13,17 @@ spring:
       host: localhost
       port: 6379
       ttl: 3600
+  session:
+    store-type: redis
+    time-to-live: 2592000
 
 server:
   port: 8123
   servlet:
     context-path: /api
+    session:
+      cookie:
+        max-age: 2592000
 
 
 

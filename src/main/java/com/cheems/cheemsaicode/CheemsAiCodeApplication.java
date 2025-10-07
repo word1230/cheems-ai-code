@@ -11,7 +11,6 @@ import org.springframework.context.annotation.EnableAspectJAutoProxy;
 @MapperScan("com.cheems.cheemsaicode.mapper")
 @EnableAspectJAutoProxy
 @SpringBootApplication(exclude = {RedisEmbeddingStoreAutoConfiguration.class})
-@EnableConfigurationProperties(RedisChatMemoryStoreConfig.class)
 public class CheemsAiCodeApplication {
 
     public static void main(String[] args) {

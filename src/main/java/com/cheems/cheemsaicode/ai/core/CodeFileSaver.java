@@ -14,6 +14,7 @@ import java.nio.charset.StandardCharsets;
  * 代码文件写入
  */
 
+@Deprecated
 public class CodeFileSaver {
 
     //文件保存目录
