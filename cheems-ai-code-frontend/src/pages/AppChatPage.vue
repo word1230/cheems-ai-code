@@ -54,7 +54,10 @@
               </a-avatar>
             </div>
             <div class="message-content">
-              <div class="message-text">{{ msg.content }}</div>
+              <div class="message-text" v-if="msg.role === 'user'">{{ msg.content }}</div>
+              <div class="message-text" v-else>
+                <MarkdownRender :content="msg.content" />
+              </div>
             </div>
           </div>
 
@@ -256,6 +259,7 @@ import { getUserVoById } from '@/api/userController'
 import { listChatHistoryByPage } from '@/api/chatHistoryController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import myAxios from '@/request'
+import MarkdownRender from '@/components/MarkdownRender.vue'
 
 const route = useRoute()
 const router = useRouter()
@@ -712,6 +716,20 @@ onMounted(() => {
   background: #f5f5f5;
   word-break: break-word;
   white-space: pre-wrap;
+}
+
+/* 为 AI 消息中的 Markdown 内容优化样式 */
+.ai-message .message-text {
+  background: #ffffff;
+  border: 1px solid #e8e8e8;
+}
+
+.ai-message .message-text .markdown-render {
+  color: #333;
+}
+
+.ai-message .message-text .markdown-render :deep(p:last-child) {
+  margin-bottom: 0;
 }
 
 .user-message .message-text {
