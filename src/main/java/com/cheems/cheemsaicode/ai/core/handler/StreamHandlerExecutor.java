@@ -25,6 +25,6 @@ public class StreamHandlerExecutor {
             case VUE_PROJECT -> 
                 jsonMessageStreamHandler.handler(messageFlux, chatHistoryService, loginUser, appId);
             
-        }
+        };
     }
 }
