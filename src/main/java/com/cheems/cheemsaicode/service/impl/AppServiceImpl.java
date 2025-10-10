@@ -127,7 +127,7 @@ public class    AppServiceImpl extends ServiceImpl<AppMapper, App> implements Ap
 
         //保存用户消息到对话历史
         chatHistoryService.saveChatHistory(appId, loginUser.getId(), userMessage, MessageTypeEnum.USER);
-
+        app.setCodeGenType("vue_project");
         //获取生成代码的类型
         String codeGenType = app.getCodeGenType();
         CodeGenTypeEnum genType = CodeGenTypeEnum.getEnumByValue(codeGenType);
