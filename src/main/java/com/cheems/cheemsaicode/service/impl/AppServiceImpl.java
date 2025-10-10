@@ -4,7 +4,10 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import lombok.RequiredArgsConstructor;
+
 import com.cheems.cheemsaicode.ai.core.AICodeGeneratorFacade;
+import com.cheems.cheemsaicode.ai.core.handler.StreamHandlerExecutor;
 import com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum;
 import com.cheems.cheemsaicode.constant.AppConstant;
 import com.cheems.cheemsaicode.exception.BusinessException;
@@ -34,16 +37,14 @@ import java.util.concurrent.atomic.AtomicReference;
  *
  * @author cheems
  */
+@RequiredArgsConstructor
 @Service
 public class    AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
     private final AICodeGeneratorFacade aICodeGeneratorFacade;
     private final ChatHistoryService chatHistoryService;
+    private final StreamHandlerExecutor streamHandlerExecutor;
 
-    public AppServiceImpl(AICodeGeneratorFacade aICodeGeneratorFacade, ChatHistoryService chatHistoryService) {
-        this.aICodeGeneratorFacade = aICodeGeneratorFacade;
-        this.chatHistoryService = chatHistoryService;
-    }
 
     @Override
     public void validApp(App app, boolean add) {
@@ -128,21 +129,11 @@ public class    AppServiceImpl extends ServiceImpl<AppMapper, App> implements Ap
         CodeGenTypeEnum genType = CodeGenTypeEnum.getEnumByValue(codeGenType);
         ThrowUtils.throwIf(genType == null, ErrorCode.PARAMS_ERROR, "无效的生成代码类型");
 
-        // 收集AI回复内容
-        AtomicReference<StringBuilder> aiResponse = new AtomicReference<>(new StringBuilder());
+        Flux<String> codestream = aICodeGeneratorFacade.generateAndSaveCodeStream(userMessage, genType, appId);;
 
-        return aICodeGeneratorFacade.generateAndSaveCodeStream(userMessage, genType, appId)
-                .doOnNext(chunk -> {
-                    // 收集每个流式块
-                    aiResponse.get().append(chunk);
-                })
-                .doOnComplete(() -> {
-                    // 流结束时保存完整的AI回复
-                    String completeAiMessage = aiResponse.get().toString();
-                    if (StrUtil.isNotBlank(completeAiMessage)) {
-                        chatHistoryService.saveChatHistory(appId, loginUser.getId(), completeAiMessage, MessageTypeEnum.AI);
-                    }
-                });
+        // 执行流处理器
+        return streamHandlerExecutor.doExecute(codestream, chatHistoryService, appId, loginUser, genType);
+
     }
 
     @Override

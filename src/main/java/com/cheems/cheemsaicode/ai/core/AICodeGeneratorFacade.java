@@ -2,6 +2,9 @@ package com.cheems.cheemsaicode.ai.core;
 
 import com.cheems.cheemsaicode.ai.AICodeGeneratorService;
 import com.cheems.cheemsaicode.ai.AiCodeGeneratorServiceFactory;
+import com.cheems.cheemsaicode.ai.core.message.AiResponseMessage;
+import com.cheems.cheemsaicode.ai.core.message.ToolExecutedMessage;
+import com.cheems.cheemsaicode.ai.core.message.ToolRequestMessage;
 import com.cheems.cheemsaicode.ai.core.parser.CodeParserExecutor;
 import com.cheems.cheemsaicode.ai.core.saver.CodeFileSaverExecutor;
 import com.cheems.cheemsaicode.ai.model.HtmlCodeResult;
@@ -10,6 +13,12 @@ import com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum;
 import com.cheems.cheemsaicode.exception.BusinessException;
 import com.cheems.cheemsaicode.exception.ErrorCode;
 import com.cheems.cheemsaicode.utils.ThrowUtils;
+
+import cn.hutool.json.JSONUtil;
+import dev.langchain4j.agent.tool.ToolExecutionRequest;
+import dev.langchain4j.model.chat.response.ChatResponse;
+import dev.langchain4j.service.TokenStream;
+import dev.langchain4j.service.tool.ToolExecution;
 import jakarta.annotation.Resource;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
@@ -75,8 +84,8 @@ public class AICodeGeneratorFacade {
                 yield  processCodeStream(result, MULTI_FILE,appId);
             }
             case VUE_PROJECT -> {
-                Flux<String> result = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
-                yield  processCodeStream(result, MULTI_FILE,appId);
+                TokenStream result = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
+                yield  processTokenStream(result);
             }
             default -> {
                 String errorMsg = "不支持生成的类型" + genTypeEnum.getValue();
@@ -84,6 +93,31 @@ public class AICodeGeneratorFacade {
             }
         };
 
+    }
+
+    private Flux<String> processTokenStream(TokenStream tokenStream) {
+      return Flux.create(sink ->{
+             tokenStream
+             .onPartialResponse((String partialResponse)->{
+                  AiResponseMessage aiResponseMessage = new AiResponseMessage(partialResponse);
+                  sink.next(JSONUtil.toJsonStr(aiResponseMessage));
+             })
+             .onPartialToolExecutionRequest((index,partialToolExecutionRequest )->{
+                ToolRequestMessage toolRequestMessage = new ToolRequestMessage(partialToolExecutionRequest);
+                sink.next(JSONUtil.toJsonStr(toolRequestMessage));
+             })
+             .onToolExecuted((ToolExecution toolExecution)->{
+                ToolExecutedMessage toolExecutedMessage = new ToolExecutedMessage(toolExecution);
+                sink.next(JSONUtil.toJsonStr(toolExecutedMessage));
+             })
+             .onCompleteResponse((ChatResponse ChatResponse) ->{
+                sink.complete();
+             })
+             .onError((Throwable throwable)->{
+                throwable.printStackTrace();
+                sink.error(throwable);
+             }).start();;
+        });
     }
 
 

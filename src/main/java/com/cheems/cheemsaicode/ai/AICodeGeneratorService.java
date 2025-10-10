@@ -4,7 +4,9 @@ import com.cheems.cheemsaicode.ai.model.HtmlCodeResult;
 import com.cheems.cheemsaicode.ai.model.MultiFileCodeResult;
 import dev.langchain4j.service.MemoryId;
 import dev.langchain4j.service.SystemMessage;
+import dev.langchain4j.service.TokenStream;
 import dev.langchain4j.service.UserMessage;
+import opennlp.tools.tokenize.TokenSample;
 import reactor.core.publisher.Flux;
 
 /**
@@ -46,6 +48,6 @@ public interface AICodeGeneratorService {
 
 
     @SystemMessage(fromResource = "prompt/codegen-vue-project-system-prompt.txt")
-    Flux<String> generateVueProjectCodeStream(@MemoryId Long appId, @UserMessage String userMessage);
+    TokenStream generateVueProjectCodeStream(@MemoryId Long appId, @UserMessage String userMessage);
 
 }
