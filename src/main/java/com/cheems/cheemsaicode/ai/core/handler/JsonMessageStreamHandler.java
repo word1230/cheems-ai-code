@@ -4,11 +4,13 @@ import java.util.Set;
 
 import org.springframework.stereotype.Component;
 
+import com.cheems.cheemsaicode.ai.core.builder.VueProjectBuilder;
 import com.cheems.cheemsaicode.ai.core.message.AiResponseMessage;
 import com.cheems.cheemsaicode.ai.core.message.StreamMessage;
 import com.cheems.cheemsaicode.ai.core.message.StreamMessageTypeEnum;
 import com.cheems.cheemsaicode.ai.core.message.ToolExecutedMessage;
 import com.cheems.cheemsaicode.ai.core.message.ToolRequestMessage;
+import com.cheems.cheemsaicode.constant.AppConstant;
 import com.cheems.cheemsaicode.model.entity.User;
 import com.cheems.cheemsaicode.model.enums.MessageTypeEnum;
 import com.cheems.cheemsaicode.service.ChatHistoryService;
@@ -18,12 +20,17 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.StrUtil;
 import cn.hutool.json.JSONObject;
 import cn.hutool.json.JSONUtil;
+import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import reactor.core.publisher.Flux;
 
 @Slf4j
 @Component
+@RequiredArgsConstructor
 public class JsonMessageStreamHandler {
+    private final VueProjectBuilder vueProjectBuilder;
+
+ 
 
     public Flux<String> handler(Flux<String> originFlux,ChatHistoryService chatHistoryService,User loginUser,Long appId){
         StringBuilder chatHistoryStringBuilder = new StringBuilder();
@@ -36,7 +43,11 @@ public class JsonMessageStreamHandler {
         .filter(StrUtil::isNotEmpty)
         .doOnComplete(() -> {
             // 流式响应结束后，添加完整记录到对话历史中
+
             chatHistoryService.saveChatHistory( appId,loginUser.getId(),chatHistoryStringBuilder.toString(),MessageTypeEnum.AI);
+            //异步构建项目
+            String projectPath = AppConstant.CODE_OUTPUT_ROOT_DIR+"/vue_project_"+appId;
+            vueProjectBuilder.buildVueProjectAsyn(projectPath);
         })
         .doOnError((error) -> {
             // 流式响应失败后，记录错误到对话历史中
