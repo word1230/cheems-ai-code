@@ -221,17 +221,17 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         return appDeployUrl;
     }
 
-    private void generateAppScreenshotAsync(Long appId,String appUrl){
-        //使用虚拟线程进行截图
-        Thread.startVirtualThread(()->{
-            //调用截图服务并将截图上传
+    private void generateAppScreenshotAsync(Long appId, String appUrl) {
+        // 使用虚拟线程进行截图
+        Thread.startVirtualThread(() -> {
+            // 调用截图服务并将截图上传
             String cosUrl = screenshotService.generateAndUploadScreenshot(appUrl);
-            //更新应用的封面
+            // 更新应用的封面
             App updateApp = new App();
             updateApp.setId(appId);
             updateApp.setCover(cosUrl);
             boolean updateById = this.updateById(updateApp);
-            ThrowUtils.throwIf(!updateById,ErrorCode.SYSTEM_ERROR,"更新应用封面失败");
+            ThrowUtils.throwIf(!updateById, ErrorCode.SYSTEM_ERROR, "更新应用封面失败");
         });
     }
 
@@ -241,14 +241,12 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         String initPrompt = appAddRequest.getInitPrompt();
         ThrowUtils.throwIf(StrUtil.isBlank(initPrompt), ErrorCode.PARAMS_ERROR, "初始化prompt不能为空");
         String appName = appAddRequest.getAppName();
-        if(StrUtil.isBlank(appName)){
+        if (StrUtil.isBlank(appName)) {
             appName = initPrompt.substring(0, Math.min(initPrompt.length(), 12));
             appAddRequest.setAppName(appName);
         }
         App app = new App();
         BeanUtils.copyProperties(appAddRequest, app);
-
-
 
         // 获取当前登录用户
         app.setUserId(loginUser.getId());
@@ -257,7 +255,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
 
         boolean save = this.save(app);
         ThrowUtils.throwIf(!save, ErrorCode.SYSTEM_ERROR);
-        log.info("应用创建成功，ID:{}，应用名称:{}，代码类型:{}",app.getId(),appName,codeGenTypeEnum.getValue());
+        log.info("应用创建成功，ID:{}，应用名称:{}，代码类型:{}", app.getId(), appName, codeGenTypeEnum.getValue());
         return app.getId();
     }
 
