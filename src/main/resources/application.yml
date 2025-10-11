@@ -34,8 +34,21 @@ cos:
     bucket:
     region:
 
-
-
+langchain4j:
+  open-ai:
+    chat-model:
+      api-key: 
+      base-url: 
+      model-name: 
+      log-requests:  true
+      log-responses: true
+    streaming-chat-model:
+      api-key: 
+      base-url: 
+      model-name: 
+      log-requests: true
+      log-responses: true
+    
 # springdoc-openapi????
 springdoc:
   api-docs:

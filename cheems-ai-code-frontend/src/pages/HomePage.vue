@@ -100,7 +100,7 @@ const handleCreateApp = async () => {
   creating.value = true
   try {
     const res = await addApp({
-      appName: userPrompt.value.substring(0, 20),
+      appName: userPrompt.value.substring(0, 12),
       initPrompt: userPrompt.value,
       codeGenType: 'multi_file',
     })
