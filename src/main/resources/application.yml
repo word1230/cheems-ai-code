@@ -25,6 +25,15 @@ server:
       cookie:
         max-age: 2592000
 
+# 腾讯云对象存储配置
+cos:
+  client:
+    host:
+    secretId:
+    secretKey:
+    bucket:
+    region:
+
 
 
 # springdoc-openapi????

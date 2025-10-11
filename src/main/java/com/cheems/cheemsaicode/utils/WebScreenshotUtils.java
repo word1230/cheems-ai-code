@@ -21,6 +21,7 @@ import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
 import io.github.bonigarcia.wdm.WebDriverManager;
+import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
@@ -34,7 +35,7 @@ public class WebScreenshotUtils {
         webDriver = initWebDriver(DEFAULT_WIDTH, DEFAULT_HEIGHT);
     }
 
-
+    
     public  static String saveWebPagescreenshot(String webUrl){
         if(StrUtil.isBlank(webUrl)){
             log.error("webUrl不能为空");
@@ -84,11 +85,11 @@ public class WebScreenshotUtils {
         }
     }
     private static void saveImage(byte[] screenshot, String originalImagePath) {
-        // TODO Auto-generated method stub
+     
         try {
              FileUtil.writeBytes(screenshot, originalImagePath);
         } catch (Exception e) {
-            // TODO: handle exception
+           
             log.error("保存图片失败", e);
             throw new BusinessException(ErrorCode.SYSTEM_ERROR, "保存图片失败"+originalImagePath);
         }

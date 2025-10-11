@@ -4,6 +4,7 @@ import cn.hutool.core.collection.CollUtil;
 import cn.hutool.core.io.FileUtil;
 import cn.hutool.core.util.RandomUtil;
 import cn.hutool.core.util.StrUtil;
+import com.cheems.cheemsaicode.ai.AiCodeGeneratorServiceFactory;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 
@@ -19,6 +20,7 @@ import com.cheems.cheemsaicode.model.entity.User;
 import com.cheems.cheemsaicode.model.enums.MessageTypeEnum;
 import com.cheems.cheemsaicode.model.vo.AppVO;
 import com.cheems.cheemsaicode.service.ChatHistoryService;
+import com.cheems.cheemsaicode.service.ScreenshotService;
 import com.cheems.cheemsaicode.utils.ThrowUtils;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
@@ -44,10 +46,13 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class    AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
+    private final AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
+
     private final AICodeGeneratorFacade aICodeGeneratorFacade;
     private final ChatHistoryService chatHistoryService;
     private final StreamHandlerExecutor streamHandlerExecutor;
     private final VueProjectBuilder vueProjectBuilder;
+    private final ScreenshotService screenshotService;
 
 
     @Override
@@ -132,6 +137,7 @@ public class    AppServiceImpl extends ServiceImpl<AppMapper, App> implements Ap
         String codeGenType = app.getCodeGenType();
         CodeGenTypeEnum genType = CodeGenTypeEnum.getEnumByValue(codeGenType);
         ThrowUtils.throwIf(genType == null, ErrorCode.PARAMS_ERROR, "无效的生成代码类型");
+        
 
         Flux<String> codestream = aICodeGeneratorFacade.generateAndSaveCodeStream(userMessage, genType, appId);;
 
@@ -205,7 +211,27 @@ public class    AppServiceImpl extends ServiceImpl<AppMapper, App> implements Ap
         boolean b = this.updateById(updateApp);
         ThrowUtils.throwIf(!b,ErrorCode.SYSTEM_ERROR,"更新应用信息失败");
 
+        String appDeployUrl = String.format("%s/%s/",AppConstant.CODE_DEPLOY_HOST,deployKey);
+        generateAppScreenshotAsync(appId,appDeployUrl);
+
         //返回url
-        return String.format("%s/%s/",AppConstant.CODE_DEPLOY_HOST,deployKey);
+        return appDeployUrl;
     }
+
+
+    private void generateAppScreenshotAsync(Long appId,String appUrl){
+        //使用虚拟线程进行截图
+        Thread.startVirtualThread(()->{
+            //调用截图服务并将截图上传
+            String cosUrl = screenshotService.generateAndUploadScreenshot(appUrl);
+            //更新应用的封面
+            App updateApp = new App();
+            updateApp.setId(appId);
+            updateApp.setCover(cosUrl);
+            boolean updateById = this.updateById(updateApp);
+            ThrowUtils.throwIf(!updateById,ErrorCode.SYSTEM_ERROR,"更新应用封面失败");
+        })
+    }
+
+
 }
