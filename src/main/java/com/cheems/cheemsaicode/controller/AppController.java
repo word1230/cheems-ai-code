@@ -4,7 +4,9 @@ import cn.hutool.json.JSONUtil;
 import com.cheems.cheemsaicode.annotation.AuthCheck;
 import com.cheems.cheemsaicode.common.BaseResponse;
 import com.cheems.cheemsaicode.common.DeleteRequest;
+import com.cheems.cheemsaicode.constant.AppConstant;
 import com.cheems.cheemsaicode.constant.UserConstant;
+import com.cheems.cheemsaicode.exception.BusinessException;
 import com.cheems.cheemsaicode.exception.ErrorCode;
 import com.cheems.cheemsaicode.model.dto.app.*;
 import com.cheems.cheemsaicode.model.entity.App;
@@ -12,6 +14,7 @@ import com.cheems.cheemsaicode.model.entity.User;
 import com.cheems.cheemsaicode.model.vo.AppVO;
 import com.cheems.cheemsaicode.service.AppService;
 import com.cheems.cheemsaicode.service.ChatHistoryService;
+import com.cheems.cheemsaicode.service.ProjectDownloadService;
 import com.cheems.cheemsaicode.service.UserService;
 import com.cheems.cheemsaicode.utils.ResultUtils;
 import com.cheems.cheemsaicode.utils.ThrowUtils;
@@ -19,6 +22,8 @@ import com.mybatisflex.core.paginate.Page;
 import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
+
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.MediaType;
 import org.springframework.http.codec.ServerSentEvent;
@@ -26,6 +31,7 @@ import org.springframework.web.bind.annotation.*;
 import reactor.core.publisher.Flux;
 import reactor.core.publisher.Mono;
 
+import java.io.File;
 import java.util.List;
 import java.util.Map;
 
@@ -46,6 +52,43 @@ public class AppController {
 
     @Resource
     private ChatHistoryService chatHistoryService;
+
+    @Resource
+    private ProjectDownloadService projectDownloadService;
+
+
+
+    /**
+     * 【用户】下载应用代码
+     * @param appId
+     * @param request
+     * @param response
+     */
+    @GetMapping("/download/{appId}")
+    public void downloadAppCode(@PathVariable Long appId, HttpServletRequest request,HttpServletResponse response){
+         //1. 基础校验
+        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
+         //2. 查询应用信息
+         App app = appService.getById(appId);
+        ThrowUtils.throwIf(app == null, ErrorCode.NOT_FOUND_ERROR, "应用不存在");
+         //权限校验
+         User loginUser = userService.getLoginUser(request);
+        ThrowUtils.throwIf(!app.getUserId().equals(loginUser.getId()), ErrorCode.NO_AUTH_ERROR, "您不是应用创建者，无法下载代码");
+         // 构建应用代码目录路径 
+        String codeGenType = app.getCodeGenType();
+        String sourceDirName =  codeGenType + "_"+appId;
+        String sourceDirPath = AppConstant.CODE_OUTPUT_ROOT_DIR + File.separator + sourceDirName;
+         //检查代码目录是否存在
+        File sourceDir = new File(sourceDirPath);
+        if(!sourceDir.exists()||!sourceDir.isDirectory()){
+            throw new BusinessException(ErrorCode.NOT_FOUND_ERROR, "代码目录不存在");
+        }
+         //生成下载的文件名
+        String downloadFileName = String.valueOf(appId);
+         //调用下载服务
+        projectDownloadService.downloadProjectAsZip(sourceDirPath, downloadFileName,response);
+    }
+
 
 
 

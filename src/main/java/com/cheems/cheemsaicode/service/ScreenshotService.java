@@ -58,7 +58,6 @@ public class ScreenshotService {
      * @param localScreenshotPath 本地截图文件的路径
      */
     private void cleanLocalFile(String localScreenshotPath) {
-        // TODO Auto-generated method stub
         try {
             // 创建文件对象
             File file = new File(localScreenshotPath);
