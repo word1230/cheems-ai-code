@@ -6,7 +6,7 @@
         target="_blank"
         rel="noopener noreferrer"
       >
-        Github
+        My Github
       </a>
     </div>
   </a-layout-footer>
@@ -16,11 +16,16 @@
 
 <style scoped>
 .footer {
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
   text-align: center;
-  background: #f0f2f5;
+  background: rgba(240, 242, 245, 0.9);
+  backdrop-filter: blur(10px);
   padding: 16px 50px;
+  border-top: 1px solid rgba(255, 255, 255, 0.2);
+  z-index: 1000;
 }
 
 .footer-content a {

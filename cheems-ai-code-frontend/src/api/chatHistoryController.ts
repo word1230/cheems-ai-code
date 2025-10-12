@@ -24,12 +24,12 @@ export async function list(options?: { [key: string]: any }) {
   })
 }
 
-/** 此处后端没有提供注释 POST /chatHistory/list/page */
-export async function listChatHistoryByPage(
+/** 此处后端没有提供注释 POST /chatHistory/list/admin */
+export async function listChatHistoryByPageAdmin(
   body: API.ChatHistoryQueryRequest,
   options?: { [key: string]: any }
 ) {
-  return request<API.BaseResponsePageChatHistory>('/chatHistory/list/page', {
+  return request<API.BaseResponsePageChatHistory>('/chatHistory/list/admin', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
@@ -39,12 +39,12 @@ export async function listChatHistoryByPage(
   })
 }
 
-/** 此处后端没有提供注释 POST /chatHistory/list/admin */
-export async function listChatHistoryByPageAdmin(
+/** 此处后端没有提供注释 POST /chatHistory/list/page */
+export async function listChatHistoryByPage(
   body: API.ChatHistoryQueryRequest,
   options?: { [key: string]: any }
 ) {
-  return request<API.BaseResponsePageChatHistory>('/chatHistory/list/admin', {
+  return request<API.BaseResponsePageChatHistory>('/chatHistory/list/page', {
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',

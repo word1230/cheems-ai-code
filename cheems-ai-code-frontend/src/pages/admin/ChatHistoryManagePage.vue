@@ -218,6 +218,7 @@ onMounted(() => {
 
 h2 {
   margin-bottom: 24px;
+   text-align: center;
 }
 
 .message-preview {

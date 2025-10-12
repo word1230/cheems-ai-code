@@ -38,7 +38,6 @@ public class AICodeGeneratorFacade {
     @Resource
     private AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
 
-
     /**
      * 单html模式调用ai， 将生成文件写入到磁盘
      */
@@ -46,16 +45,17 @@ public class AICodeGeneratorFacade {
         // 校验参数
         ThrowUtils.throwIf(genTypeEnum == null, ErrorCode.SYSTEM_ERROR, "生成类型为空");
 
-        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId,genTypeEnum );
+        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId,
+                genTypeEnum);
 
         return switch (genTypeEnum) {
             case HTML -> {
                 HtmlCodeResult htmlCodeResult = aiCodeGeneratorService.generateHtmlCode(userMessage);
-                yield  CodeFileSaverExecutor.saveFiles(htmlCodeResult, HTML,appId);
+                yield CodeFileSaverExecutor.saveFiles(htmlCodeResult, HTML, appId);
             }
             case MULTI_FILE -> {
                 MultiFileCodeResult multiFileCodeResult = aiCodeGeneratorService.generateMultiFileCode(userMessage);
-                yield  CodeFileSaverExecutor.saveFiles(multiFileCodeResult, MULTI_FILE,appId);
+                yield CodeFileSaverExecutor.saveFiles(multiFileCodeResult, MULTI_FILE, appId);
             }
             default -> {
                 String errorMsg = "不支持生成的类型" + genTypeEnum.getValue();
@@ -71,21 +71,21 @@ public class AICodeGeneratorFacade {
     public Flux<String> generateAndSaveCodeStream(String userMessage, CodeGenTypeEnum genTypeEnum, Long appId) {
         // 校验参数
         ThrowUtils.throwIf(genTypeEnum == null, ErrorCode.SYSTEM_ERROR, "生成类型为空");
-        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId,genTypeEnum);
-
+        AICodeGeneratorService aiCodeGeneratorService = aiCodeGeneratorServiceFactory.getAiCodeGeneratorService(appId,
+                genTypeEnum);
 
         return switch (genTypeEnum) {
             case HTML -> {
                 Flux<String> result = aiCodeGeneratorService.generateHtmlCodeStream(userMessage);
-                yield  processCodeStream(result, HTML,appId);
+                yield processCodeStream(result, HTML, appId);
             }
             case MULTI_FILE -> {
                 Flux<String> result = aiCodeGeneratorService.generateMultiFileCodeStream(userMessage);
-                yield  processCodeStream(result, MULTI_FILE,appId);
+                yield processCodeStream(result, MULTI_FILE, appId);
             }
             case VUE_PROJECT -> {
                 TokenStream result = aiCodeGeneratorService.generateVueProjectCodeStream(appId, userMessage);
-                yield  processTokenStream(result);
+                yield processTokenStream(result);
             }
             default -> {
                 String errorMsg = "不支持生成的类型" + genTypeEnum.getValue();
@@ -96,30 +96,30 @@ public class AICodeGeneratorFacade {
     }
 
     private Flux<String> processTokenStream(TokenStream tokenStream) {
-      return Flux.create(sink ->{
-             tokenStream
-             .onPartialResponse((String partialResponse)->{
-                  AiResponseMessage aiResponseMessage = new AiResponseMessage(partialResponse);
-                  sink.next(JSONUtil.toJsonStr(aiResponseMessage));
-             })
-             .onPartialToolExecutionRequest((index,partialToolExecutionRequest )->{
-                ToolRequestMessage toolRequestMessage = new ToolRequestMessage(partialToolExecutionRequest);
-                sink.next(JSONUtil.toJsonStr(toolRequestMessage));
-             })
-             .onToolExecuted((ToolExecution toolExecution)->{
-                ToolExecutedMessage toolExecutedMessage = new ToolExecutedMessage(toolExecution);
-                sink.next(JSONUtil.toJsonStr(toolExecutedMessage));
-             })
-             .onCompleteResponse((ChatResponse ChatResponse) ->{
-                sink.complete();
-             })
-             .onError((Throwable throwable)->{
-                throwable.printStackTrace();
-                sink.error(throwable);
-             }).start();;
+        return Flux.create(sink -> {
+            tokenStream
+                    .onPartialResponse((String partialResponse) -> {
+                        AiResponseMessage aiResponseMessage = new AiResponseMessage(partialResponse);
+                        sink.next(JSONUtil.toJsonStr(aiResponseMessage));
+                    })
+                    .onPartialToolExecutionRequest((index, partialToolExecutionRequest) -> {
+                        ToolRequestMessage toolRequestMessage = new ToolRequestMessage(partialToolExecutionRequest);
+                        sink.next(JSONUtil.toJsonStr(toolRequestMessage));
+                    })
+                    .onToolExecuted((ToolExecution toolExecution) -> {
+                        ToolExecutedMessage toolExecutedMessage = new ToolExecutedMessage(toolExecution);
+                        sink.next(JSONUtil.toJsonStr(toolExecutedMessage));
+                    })
+                    .onCompleteResponse((ChatResponse ChatResponse) -> {
+                        sink.complete();
+                    })
+                    .onError((Throwable throwable) -> {
+                        throwable.printStackTrace();
+                        sink.error(throwable);
+                    }).start();
+            ;
         });
     }
-
 
     private Flux<String> processCodeStream(Flux<String> codeStream, CodeGenTypeEnum genType, Long appId) {
 
@@ -129,7 +129,7 @@ public class AICodeGeneratorFacade {
                 .doOnComplete(() -> {
                     try {
                         Object parseCode = CodeParserExecutor.parseCode(codeBuilder.toString(), genType);
-                        File file = CodeFileSaverExecutor.saveFiles(parseCode, genType,appId);
+                        File file = CodeFileSaverExecutor.saveFiles(parseCode, genType, appId);
                         log.info("保存成功：路径为：" + file.getAbsolutePath());
                     } catch (Exception e) {
                         log.error("保存失败： {}", e.getMessage());

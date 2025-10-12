@@ -1,44 +1,42 @@
 package com.cheems.cheemsaicode.service.impl;
 
-import cn.hutool.core.collection.CollUtil;
-import cn.hutool.core.io.FileUtil;
-import cn.hutool.core.util.RandomUtil;
-import cn.hutool.core.util.StrUtil;
+import java.io.File;
+import java.time.LocalDateTime;
+import java.util.List;
 
-import com.cheems.cheemsaicode.ai.AiCodeGenTypeRoutingService;
-import com.cheems.cheemsaicode.ai.AiCodeGeneratorServiceFactory;
-import lombok.RequiredArgsConstructor;
-import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.BeanUtils;
+import org.springframework.stereotype.Service;
 
+import com.cheems.cheemsaicode.ai.AiCodeGenAppParamService;
 import com.cheems.cheemsaicode.ai.core.AICodeGeneratorFacade;
 import com.cheems.cheemsaicode.ai.core.builder.VueProjectBuilder;
 import com.cheems.cheemsaicode.ai.core.handler.StreamHandlerExecutor;
+import com.cheems.cheemsaicode.ai.model.AiCodeGenAppParam;
 import com.cheems.cheemsaicode.ai.model.enums.CodeGenTypeEnum;
 import com.cheems.cheemsaicode.constant.AppConstant;
 import com.cheems.cheemsaicode.exception.BusinessException;
 import com.cheems.cheemsaicode.exception.ErrorCode;
+import com.cheems.cheemsaicode.mapper.AppMapper;
 import com.cheems.cheemsaicode.model.dto.app.AppAddRequest;
 import com.cheems.cheemsaicode.model.dto.app.AppQueryRequest;
+import com.cheems.cheemsaicode.model.entity.App;
 import com.cheems.cheemsaicode.model.entity.User;
 import com.cheems.cheemsaicode.model.enums.MessageTypeEnum;
 import com.cheems.cheemsaicode.model.vo.AppVO;
+import com.cheems.cheemsaicode.service.AppService;
 import com.cheems.cheemsaicode.service.ChatHistoryService;
 import com.cheems.cheemsaicode.service.ScreenshotService;
-import com.cheems.cheemsaicode.utils.ResultUtils;
 import com.cheems.cheemsaicode.utils.ThrowUtils;
 import com.mybatisflex.core.query.QueryWrapper;
 import com.mybatisflex.spring.service.impl.ServiceImpl;
-import com.cheems.cheemsaicode.model.entity.App;
-import com.cheems.cheemsaicode.mapper.AppMapper;
-import com.cheems.cheemsaicode.service.AppService;
-import org.springframework.beans.BeanUtils;
-import org.springframework.stereotype.Service;
-import reactor.core.publisher.Flux;
 
-import java.io.File;
-import java.time.LocalDateTime;
-import java.util.List;
-import java.util.concurrent.atomic.AtomicReference;
+import cn.hutool.core.collection.CollUtil;
+import cn.hutool.core.io.FileUtil;
+import cn.hutool.core.util.RandomUtil;
+import cn.hutool.core.util.StrUtil;
+import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import reactor.core.publisher.Flux;
 
 /**
  * 应用 服务层实现。
@@ -50,14 +48,12 @@ import java.util.concurrent.atomic.AtomicReference;
 @Service
 public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppService {
 
-    private final AiCodeGeneratorServiceFactory aiCodeGeneratorServiceFactory;
-
     private final AICodeGeneratorFacade aICodeGeneratorFacade;
     private final ChatHistoryService chatHistoryService;
     private final StreamHandlerExecutor streamHandlerExecutor;
     private final VueProjectBuilder vueProjectBuilder;
     private final ScreenshotService screenshotService;
-    private final AiCodeGenTypeRoutingService aiCodeGenTypeRoutingService;
+    private final AiCodeGenAppParamService aiCodeGenAppParamService;
 
     @Override
     public void validApp(App app, boolean add) {
@@ -240,18 +236,29 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         ThrowUtils.throwIf(appAddRequest == null, ErrorCode.PARAMS_ERROR);
         String initPrompt = appAddRequest.getInitPrompt();
         ThrowUtils.throwIf(StrUtil.isBlank(initPrompt), ErrorCode.PARAMS_ERROR, "初始化prompt不能为空");
-        String appName = appAddRequest.getAppName();
-        if (StrUtil.isBlank(appName)) {
-            appName = initPrompt.substring(0, Math.min(initPrompt.length(), 12));
-            appAddRequest.setAppName(appName);
-        }
+
         App app = new App();
         BeanUtils.copyProperties(appAddRequest, app);
 
         // 获取当前登录用户
         app.setUserId(loginUser.getId());
-        CodeGenTypeEnum codeGenTypeEnum = aiCodeGenTypeRoutingService.routeCodeGenTypeEnum(initPrompt);
+
+        // 调用AI生成App的名称
+        AiCodeGenAppParam aiCodeGenAppParam = aiCodeGenAppParamService.generateCodeGenAppParam(initPrompt);
+        String appName = aiCodeGenAppParam.getName();
+        CodeGenTypeEnum codeGenTypeEnum = aiCodeGenAppParam.getCodeGenTypeEnum();
+        log.info("生成的应用名称：{}", appName);
+        log.info("生成的代码类型：{}", codeGenTypeEnum.getValue());
+        app.setAppName(appName);
         app.setCodeGenType(codeGenTypeEnum.getValue());
+        // log.info("生成的应用名称:{}", appName);
+        // app.setAppName(appName);
+
+        // //AI判断生成的类型并设置
+        // CodeGenTypeEnum codeGenTypeEnum =
+        // aiCodeGenTypeRoutingService.routeCodeGenTypeEnum(initPrompt);
+        // log.info("AI判断生成的类型:{}", codeGenTypeEnum.getValue());
+        // app.setCodeGenType(codeGenTypeEnum.getValue());
 
         boolean save = this.save(app);
         ThrowUtils.throwIf(!save, ErrorCode.SYSTEM_ERROR);
