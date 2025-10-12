@@ -23,7 +23,7 @@ public class ReasoningStreamingChatModelConfig {
     public StreamingChatModel reasoningStreamingChatModel() {
 
 
-        String modelName = "glm-4.6";
+        String modelName = "qwen3-coder-plus";
 
 //        String modelName = "gemini-2.5-flash-maxthinking";            todo 生产使用
 

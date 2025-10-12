@@ -10,6 +10,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestMethod;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.servlet.HandlerMapping;
 
@@ -38,6 +39,7 @@ public class StaticResourceController {
             if (resourcePath.isEmpty()) {
                 HttpHeaders headers = new HttpHeaders();
                 headers.add("Location", request.getRequestURI() + "/");
+                headers.add("Access-Control-Allow-Origin", "*");
                 return new ResponseEntity<>(headers, HttpStatus.MOVED_PERMANENTLY);
             }
             // 默认返回 index.html
@@ -47,18 +49,51 @@ public class StaticResourceController {
             // 构建文件路径
             String filePath = PREVIEW_ROOT_DIR + "/" + deployKey + resourcePath;
             File file = new File(filePath);
+
+            // 如果是 Vue 项目，优先检查 dist 目录
+            if (deployKey.startsWith("vue_project_")) {
+                String distFilePath = PREVIEW_ROOT_DIR + "/" + deployKey + "/dist" + resourcePath;
+                File distFile = new File(distFilePath);
+                if (distFile.exists()) {
+                    file = distFile;
+                }
+            }
+
             // 检查文件是否存在
             if (!file.exists()) {
-                return ResponseEntity.notFound().build();
+                return ResponseEntity.notFound()
+                        .header("Access-Control-Allow-Origin", "*")
+                        .build();
             }
             // 返回文件资源
             Resource resource = new FileSystemResource(file);
             return ResponseEntity.ok()
                     .header("Content-Type", getContentTypeWithCharset(filePath))
+                    .header("Access-Control-Allow-Origin", "*")
+                    .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                    .header("Access-Control-Allow-Headers", "*")
+                    .header("Access-Control-Max-Age", "3600")
                     .body(resource);
         } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).build();
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .header("Access-Control-Allow-Origin", "*")
+                    .build();
         }
+    }
+
+    /**
+     * 处理 OPTIONS 预检请求
+     */
+    @RequestMapping(value = "/{deployKey}/**", method = RequestMethod.OPTIONS)
+    public ResponseEntity<Void> handleOptions(
+            @PathVariable String deployKey,
+            HttpServletRequest request) {
+        return ResponseEntity.ok()
+                .header("Access-Control-Allow-Origin", "*")
+                .header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
+                .header("Access-Control-Allow-Headers", "*")
+                .header("Access-Control-Max-Age", "3600")
+                .build();
     }
 
     /**

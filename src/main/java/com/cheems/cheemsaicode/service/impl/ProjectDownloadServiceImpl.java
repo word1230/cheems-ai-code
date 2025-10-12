@@ -34,7 +34,6 @@ public class ProjectDownloadServiceImpl implements ProjectDownloadService {
             "build",
             ".DS_Store",
             ".env",
-            "target",
             ".mvn",
             ".idea",
             ".vscode");

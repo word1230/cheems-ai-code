@@ -65,6 +65,7 @@ import { SendOutlined } from '@ant-design/icons-vue'
 import { addApp, listMyAppVoByPage, listAppVoByPage } from '@/api/appController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import AppCard from '@/components/AppCard.vue'
+import { CODE_GEN_TYPE_CONFIG, CodeGenTypeEnum } from '@/constants/CodeGenType'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
@@ -97,12 +98,13 @@ const handleCreateApp = async () => {
     return
   }
 
+  const codeGenType = CODE_GEN_TYPE_CONFIG[CodeGenTypeEnum.MULTI_FILE].value
   creating.value = true
   try {
     const res = await addApp({
       appName: userPrompt.value.substring(0, 12),
       initPrompt: userPrompt.value,
-      codeGenType: 'multi_file',
+      codeGenType: codeGenType,
     })
 
     if (res.data.code === 0 && res.data.data) {

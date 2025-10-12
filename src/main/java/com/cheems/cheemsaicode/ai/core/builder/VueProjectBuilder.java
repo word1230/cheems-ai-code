@@ -3,10 +3,13 @@ package com.cheems.cheemsaicode.ai.core.builder;
 import java.io.File;
 import java.util.concurrent.TimeUnit;
 
+import org.springframework.stereotype.Component;
+
 import cn.hutool.core.util.RuntimeUtil;
 import lombok.extern.slf4j.Slf4j;
 
 @Slf4j
+@Component
 public class VueProjectBuilder {
 
 

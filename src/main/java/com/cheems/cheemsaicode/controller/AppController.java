@@ -23,6 +23,7 @@ import com.mybatisflex.core.query.QueryWrapper;
 import jakarta.annotation.Resource;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import lombok.extern.slf4j.Slf4j;
 
 import org.springframework.beans.BeanUtils;
 import org.springframework.http.MediaType;
@@ -42,6 +43,7 @@ import java.util.Map;
  */
 @RestController
 @RequestMapping("/app")
+@Slf4j
 public class AppController {
 
     @Resource
@@ -131,23 +133,64 @@ public class AppController {
     @GetMapping(path = "/chat/gen/code", produces = MediaType.TEXT_EVENT_STREAM_VALUE)
     public Flux<ServerSentEvent<String>> chatToGenCode(String userMessage, Long appId, HttpServletRequest request) {
 
-        ThrowUtils.throwIf(userMessage == null || userMessage.length() == 0, ErrorCode.PARAMS_ERROR, "用户消息不能为空");
-        ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
-        User loginUser = userService.getLoginUser(request);
-        Flux<String> stringFlux = appService.chatToGenCode(userMessage, appId, loginUser);
-        return stringFlux
-                .map(chunk -> {
-                    Map<String, String> wrapper = Map.of("data", chunk);
-                    String jsonData = JSONUtil.toJsonStr(wrapper);
-                    return ServerSentEvent.<String>builder()
-                            .data(jsonData)
-                            .build();
-                })
-                .concatWith(Mono.just(
-                        ServerSentEvent.<String>builder()
-                                .event("done")
-                                .data("")
-                                .build()));
+        try {
+            ThrowUtils.throwIf(userMessage == null || userMessage.length() == 0, ErrorCode.PARAMS_ERROR, "用户消息不能为空");
+            ThrowUtils.throwIf(appId == null || appId <= 0, ErrorCode.PARAMS_ERROR, "应用ID不能为空");
+            User loginUser = userService.getLoginUser(request);
+            Flux<String> stringFlux = appService.chatToGenCode(userMessage, appId, loginUser);
+
+            return stringFlux
+                    .map(chunk -> {
+                        Map<String, String> wrapper = Map.of("data", chunk);
+                        String jsonData = JSONUtil.toJsonStr(wrapper);
+                        return ServerSentEvent.<String>builder()
+                                .data(jsonData)
+                                .build();
+                    })
+                    .concatWith(Mono.just(
+                            ServerSentEvent.<String>builder()
+                                    .event("done")
+                                    .data("")
+                                    .build()))
+                    .onErrorResume(Exception.class, e -> {
+                        // 处理异常，返回流式格式的错误信息
+                        log.error("流式代码生成异常", e);
+                        String errorMessage;
+                        if (e.getCause() instanceof dev.langchain4j.exception.RateLimitException) {
+                            errorMessage = "请求过于频繁，请稍后再试。API 限制：" + e.getCause().getMessage();
+                        } else {
+                            errorMessage = "生成失败：" + e.getMessage();
+                        }
+                        Map<String, String> errorWrapper = Map.of("error", errorMessage);
+                        String jsonData = JSONUtil.toJsonStr(errorWrapper);
+
+                        return Flux.concat(
+                            Mono.just(ServerSentEvent.<String>builder()
+                                    .data(jsonData)
+                                    .build()),
+                            Mono.just(ServerSentEvent.<String>builder()
+                                    .event("error")
+                                    .data("")
+                                    .build())
+                        );
+                    });
+        } catch (Exception e) {
+            // 处理前置校验异常
+            log.error("代码生成前置校验失败", e);
+            String errorMessage = "参数校验失败：" + e.getMessage();
+            Map<String, String> errorWrapper = Map.of("error", errorMessage);
+            String jsonData = JSONUtil.toJsonStr(errorWrapper);
+
+            return Flux.concat(
+                Mono.just(ServerSentEvent.<String>builder()
+                        .data(jsonData)
+                        .build()),
+                Mono.just(ServerSentEvent.<String>builder()
+                        .event("error")
+                        .data("")
+                        .build())
+            );
+        }
     }
 
     @PostMapping("/deploy")
