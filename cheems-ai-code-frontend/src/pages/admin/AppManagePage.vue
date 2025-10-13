@@ -1,7 +1,7 @@
 <template>
   <div class="app-manage-page">
     <h2>应用管理</h2>
-    
+
     <a-card style="margin-bottom: 16px">
       <a-form layout="inline">
         <a-form-item label="应用名称">
@@ -30,16 +30,16 @@
           <img v-if="record.cover" :src="record.cover" style="width: 60px; height: 60px; object-fit: cover; border-radius: 4px" />
           <span v-else>-</span>
         </template>
-        
+
         <template v-if="column.key === 'priority'">
           <a-tag v-if="record.priority >= 99" color="gold">精选</a-tag>
           <span v-else>{{ record.priority }}</span>
         </template>
-        
+
         <template v-if="column.key === 'createTime'">
           {{ formatTime(record.createTime) }}
         </template>
-        
+
         <template v-if="column.key === 'action'">
           <a-space>
             <a-button type="link" size="small" @click="handleEdit(record)">编辑</a-button>
@@ -132,7 +132,7 @@ const loadData = async () => {
       sortField: 'createTime',
       sortOrder: 'desc',
     })
-    
+
     if (res.data.code === 0 && res.data.data) {
       dataList.value = res.data.data.records || []
       pagination.total = res.data.data.totalRow || 0
@@ -181,7 +181,7 @@ const handleFeature = async (record: API.AppVO) => {
       cover: record.cover,
       priority: newPriority,
     })
-    
+
     if (res.data.code === 0) {
       message.success(newPriority >= 99 ? '已设为精选' : '已取消精选')
       loadData()
@@ -196,7 +196,7 @@ const handleFeature = async (record: API.AppVO) => {
 // 删除
 const handleDelete = async (id?: string) => {
   if (!id) return
-  
+
   try {
     const res = await deleteAppByAdmin({ id })
     if (res.data.code === 0) {
@@ -228,5 +228,6 @@ onMounted(() => {
 
 h2 {
   margin-bottom: 24px;
+   text-align: center;
 }
 </style>

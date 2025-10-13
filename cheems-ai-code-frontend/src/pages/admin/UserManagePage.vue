@@ -1,59 +1,69 @@
 <template>
+  <div class="user-manage-page">
+    <h2>用户管理</h2>
 
+    <a-card style="margin-bottom: 16px">
+      <!-- 搜索表单 -->
+      <a-form layout="inline" :model="searchParams" @finish="doSearch">
+        <a-form-item label="账号">
+          <a-input v-model:value="searchParams.userAccount" placeholder="输入账号" />
+        </a-form-item>
+        <a-form-item label="用户名">
+          <a-input v-model:value="searchParams.userName" placeholder="输入用户名" />
+        </a-form-item>
+        <a-form-item>
+          <a-button type="primary" html-type="submit">
+            <template #icon><SearchOutlined /></template>
+            搜索</a-button
+          >
+        </a-form-item>
+      </a-form>
+    </a-card>
 
-<!-- 搜索表单 -->
-  <a-form layout="inline" :model="searchParams" @finish="doSearch">
-    <a-form-item label="账号">
-      <a-input v-model:value="searchParams.userAccount" placeholder="输入账号" />
-    </a-form-item>
-    <a-form-item label="用户名">
-      <a-input v-model:value="searchParams.userName" placeholder="输入用户名" />
-    </a-form-item>
-    <a-form-item>
-      <a-button type="primary" html-type="submit">搜索</a-button>
-    </a-form-item>
-  </a-form>
-  <a-divider />
-  <!-- 表格 -->
-
-  <a-table :columns="columns" :data-source="data" :pagination="pagination" @change="doTableChange">
-    <template #headerCell="{ column }">
-      <template v-if="column.key === 'name'">
-        <span>
-          <smile-outlined />
-          Name
-        </span>
+    <!-- 表格 -->
+    <a-table
+      :columns="columns"
+      :data-source="data"
+      :pagination="pagination"
+      @change="doTableChange"
+    >
+      <template #headerCell="{ column }">
+        <template v-if="column.key === 'name'">
+          <span>
+            <smile-outlined />
+            Name
+          </span>
+        </template>
       </template>
-    </template>
 
-    <template #bodyCell="{ column, record }">
-  <template v-if="column.dataIndex === 'userAvatar'">
-    <a-image :src="record.userAvatar" :width="120" />
-  </template>
-  <template v-else-if="column.dataIndex === 'userRole'">
-    <div v-if="record.userRole === 'admin'">
-      <a-tag color="green">管理员</a-tag>
-    </div>
-    <div v-else>
-      <a-tag color="blue">普通用户</a-tag>
-    </div>
-  </template>
-  <template v-else-if="column.dataIndex === 'createTime'">
-    {{ dayjs(record.createTime).format('YYYY-MM-DD HH:mm:ss') }}
-  </template>
-  <template v-else-if="column.key === 'action'">
-    <a-button danger @click="doDelete(record.id)">删除</a-button>
-  </template>
-</template>
-
-  </a-table>
+      <template #bodyCell="{ column, record }">
+        <template v-if="column.dataIndex === 'userAvatar'">
+          <a-image :src="record.userAvatar" :width="120" />
+        </template>
+        <template v-else-if="column.dataIndex === 'userRole'">
+          <div v-if="record.userRole === 'admin'">
+            <a-tag color="green">管理员</a-tag>
+          </div>
+          <div v-else>
+            <a-tag color="blue">普通用户</a-tag>
+          </div>
+        </template>
+        <template v-else-if="column.dataIndex === 'createTime'">
+          {{ dayjs(record.createTime).format('YYYY-MM-DD HH:mm:ss') }}
+        </template>
+        <template v-else-if="column.key === 'action'">
+          <a-button danger @click="doDelete(record.id)">删除</a-button>
+        </template>
+      </template>
+    </a-table>
+  </div>
 </template>
 <script lang="ts" setup>
-import { SmileOutlined, DownOutlined } from '@ant-design/icons-vue';
-import { ref, reactive, onMounted, computed } from 'vue';
-import { message } from 'ant-design-vue';
-import { deleteUser, listUserVoByPage } from '@/api/userController';
-import dayjs from 'dayjs';
+import { SmileOutlined, SearchOutlined } from '@ant-design/icons-vue'
+import { ref, reactive, onMounted, computed } from 'vue'
+import { message } from 'ant-design-vue'
+import { deleteUser, listUserVoByPage } from '@/api/userController'
+import dayjs from 'dayjs'
 const columns = [
   {
     title: 'id',
@@ -87,7 +97,7 @@ const columns = [
     title: '操作',
     key: 'action',
   },
-];
+]
 
 // 数据
 const data = ref<API.UserVO[]>([])
@@ -156,8 +166,14 @@ const doDelete = async (id: string) => {
     message.error('删除失败')
   }
 }
-
-
-
 </script>
 
+<style scoped>
+.user-manage-page {
+  padding: 24px;
+}
+h2 {
+  margin-bottom: 24px;
+   text-align: center;
+}
+</style>

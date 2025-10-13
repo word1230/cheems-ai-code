@@ -15,5 +15,4 @@ public class CheemsAiCodeApplication {
     public static void main(String[] args) {
         SpringApplication.run(CheemsAiCodeApplication.class, args);
     }
-
 }

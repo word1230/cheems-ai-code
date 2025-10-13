@@ -6,11 +6,27 @@
           <template #icon><ArrowLeftOutlined /></template>
         </a-button>
         <h2 class="app-title">{{ appInfo?.appName || '加载中...' }}</h2>
+        <a-tag
+          v-if="appInfo?.codeGenType"
+          :color="getCodeGenTypeColor"
+          style="margin-left: 12px; font-size: 12px;"
+        >
+          {{ getCodeGenTypeLabel }}
+        </a-tag>
       </div>
       <div class="header-right">
         <a-button @click="showDetailModal = true">
           <template #icon><InfoCircleOutlined /></template>
           应用详情
+        </a-button>
+        <a-button
+          @click="handleDownloadCode"
+          :loading="downloading"
+          :disabled="!appInfo?.id"
+          style="margin-left: 8px"
+        >
+          <template #icon><DownloadOutlined /></template>
+          下载代码
         </a-button>
         <a-button
           type="primary"
@@ -49,27 +65,24 @@
               <a-avatar v-if="msg.role === 'user'" :src="loginUserStore.loginUser.userAvatar">
                 {{ loginUserStore.loginUser.userName?.charAt(0) }}
               </a-avatar>
-              <a-avatar v-else style="background-color: #1890ff">
-                <template #icon><RobotOutlined /></template>
+              <a-avatar v-else :src="aiAvatarSrc" :alt="'AI助手'">
+                <template #icon v-if="!aiAvatarSrc"><RobotOutlined /></template>
               </a-avatar>
             </div>
             <div class="message-content">
               <div class="message-text" v-if="msg.role === 'user'">{{ msg.content }}</div>
               <div class="message-text" v-else>
-                <MarkdownRender :content="msg.content" />
-              </div>
-            </div>
-          </div>
-
-          <div v-if="generating" class="message-item ai-message">
-            <div class="message-avatar">
-              <a-avatar style="background-color: #1890ff">
-                <template #icon><RobotOutlined /></template>
-              </a-avatar>
-            </div>
-            <div class="message-content">
-              <div class="message-text">
-                <a-spin size="small" /> AI 正在生成中...
+                <!-- AI 消息：显示生成内容或加载状态 -->
+                <template v-if="msg.isGenerating && !msg.content">
+                  <a-spin size="small" /> AI 正在生成中...
+                </template>
+                <template v-else>
+                  <MarkdownRender :content="msg.content" />
+                  <!-- 如果还在生成中但有内容，显示加载指示器 -->
+                  <div v-if="msg.isGenerating" style="margin-top: 8px;">
+                    <a-spin size="small" /> 正在生成中...
+                  </div>
+                </template>
               </div>
             </div>
           </div>
@@ -91,7 +104,7 @@
           <a-textarea
             v-else
             v-model:value="userMessage"
-            placeholder="描述你想要的功能，可以一步一步完善生成效果..."
+            placeholder="请描述你想生成的网站，越详细效果越好哦"
             :auto-size="{ minRows: 2, maxRows: 4 }"
             @pressEnter="handleSend"
           />
@@ -144,6 +157,18 @@
           <div class="detail-item">
             <span class="detail-label">应用名称：</span>
             <span class="detail-value">{{ appInfo.appName }}</span>
+          </div>
+          <div class="detail-item">
+            <span class="detail-label">生成类型：</span>
+            <span class="detail-value">
+              <a-tag
+                v-if="appInfo.codeGenType"
+                :color="getCodeGenTypeColor"
+              >
+                {{ getCodeGenTypeLabel }}
+              </a-tag>
+              <span v-else>-</span>
+            </span>
           </div>
           <div class="detail-item">
             <span class="detail-label">创建者：</span>
@@ -252,24 +277,31 @@ import {
   CheckCircleOutlined,
   GlobalOutlined,
   CopyOutlined,
-  UpOutlined
+  UpOutlined,
+  DownloadOutlined
 } from '@ant-design/icons-vue'
-import { getAppVoById, deployApp, deleteApp } from '@/api/appController'
+import { getAppVoById, deployApp, deleteApp, downloadAppCode } from '@/api/appController'
 import { getUserVoById } from '@/api/userController'
 import { listChatHistoryByPage } from '@/api/chatHistoryController'
 import { useLoginUserStore } from '@/stores/loginUser'
 import myAxios from '@/request'
 import MarkdownRender from '@/components/MarkdownRender.vue'
+import { CODE_GEN_TYPE_CONFIG, CodeGenTypeEnum } from '@/constants/CodeGenType'
+import { buildPreviewUrl, buildChatApiUrl } from '@/constants/env'
 
 const route = useRoute()
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
+
+// AI头像地址
+const aiAvatarSrc = new URL('@/assets/logo.png', import.meta.url).href
 
 interface Message {
   id?: number
   role: 'user' | 'ai'
   content: string
   createTime?: string
+  isGenerating?: boolean // 标识AI是否正在生成中
 }
 
 const appInfo = ref<API.AppVO>()
@@ -277,6 +309,7 @@ const messages = ref<Message[]>([])
 const userMessage = ref('')
 const generating = ref(false)
 const deploying = ref(false)
+const downloading = ref(false)
 const previewUrl = ref('')
 const iframeKey = ref(0) // 用于强制重新加载iframe
 const messagesContainer = ref<HTMLElement>()
@@ -298,6 +331,27 @@ const appId = route.params.id as string
 // 是否可以管理（本人或管理员）
 const canManage = computed(() => {
   return isOwner.value || loginUserStore.loginUser.userRole === 'admin'
+})
+
+// 获取生成类型标签文本
+const getCodeGenTypeLabel = computed(() => {
+  if (!appInfo.value?.codeGenType) return ''
+  return CODE_GEN_TYPE_CONFIG[appInfo.value.codeGenType as CodeGenTypeEnum]?.label || appInfo.value.codeGenType
+})
+
+// 获取生成类型标签颜色
+const getCodeGenTypeColor = computed(() => {
+  if (!appInfo.value?.codeGenType) return 'default'
+  switch (appInfo.value.codeGenType) {
+    case CodeGenTypeEnum.HTML:
+      return 'orange'
+    case CodeGenTypeEnum.MULTI_FILE:
+      return 'blue'
+    case CodeGenTypeEnum.VUE_PROJECT:
+      return 'green'
+    default:
+      return 'default'
+  }
 })
 
 // 加载历史消息
@@ -335,7 +389,7 @@ const loadChatHistory = async (isLoadMore = false) => {
       // 首次加载完成后，检查是否需要展示网站
       if (!isLoadMore && totalHistory.value >= 2 && appInfo.value?.codeGenType && appInfo.value?.id) {
         iframeKey.value += 1
-        previewUrl.value = `http://localhost:8123/api/static/${appInfo.value.codeGenType}_${appInfo.value.id}/?t=${Date.now()}`
+        previewUrl.value = buildPreviewUrl(appInfo.value.codeGenType, appInfo.value.id, Date.now())
       }
     }
   } catch (error) {
@@ -403,10 +457,10 @@ const loadCreatorInfo = async (userId: string) => {
 const generateCode = async (prompt: string) => {
   generating.value = true
   let aiResponse = ''
-  
+
   try {
     const response = await fetch(
-      `http://localhost:8123/api/app/chat/gen/code?userMessage=${encodeURIComponent(prompt)}&appId=${encodeURIComponent(appId)}`,
+      buildChatApiUrl(prompt, appId),
       {
         method: 'GET',
         credentials: 'include',
@@ -420,26 +474,27 @@ const generateCode = async (prompt: string) => {
     const reader = response.body.getReader()
     const decoder = new TextDecoder()
 
-    // 添加AI消息占位
+    // 添加AI消息占位，标记为正在生成中
     const aiMessageIndex = messages.value.length
     messages.value.push({
       role: 'ai',
-      content: ''
+      content: '',
+      isGenerating: true
     })
 
     let buffer = ''
-    
+
     while (true) {
       const { done, value } = await reader.read()
       if (done) break
 
       const chunk = decoder.decode(value, { stream: true })
       buffer += chunk
-      
+
       // 处理 SSE 格式的数据流
       const lines = buffer.split('\n')
       buffer = lines.pop() || '' // 保留最后一个不完整的行
-      
+
       for (const line of lines) {
         if (line.startsWith('data:')) {
           try {
@@ -476,21 +531,38 @@ const generateCode = async (prompt: string) => {
           }
         }
       }
-      
+
       // 滚动到底部
       await nextTick()
       scrollToBottom()
+    }
+
+    // 生成完成后，标记为不再生成
+    if (messages.value[aiMessageIndex]) {
+      messages.value[aiMessageIndex].isGenerating = false
     }
 
     // 生成完成后显示预览
     if (appInfo.value?.codeGenType && appInfo.value?.id) {
       // 强制重新加载iframe
       iframeKey.value += 1
-      previewUrl.value = `http://localhost:8123/api/static/${appInfo.value.codeGenType}_${appInfo.value.id}/?t=${Date.now()}`
+      previewUrl.value = buildPreviewUrl(appInfo.value.codeGenType, appInfo.value.id, Date.now())
     }
   } catch (error) {
     message.error('生成失败，请重试')
     console.error(error)
+
+    // 如果出错，移除生成中的消息或标记为错误状态
+    const lastMessage = messages.value[messages.value.length - 1]
+    if (lastMessage && lastMessage.isGenerating) {
+      if (!lastMessage.content) {
+        // 如果没有内容，移除这条消息
+        messages.value.pop()
+      } else {
+        // 如果有内容，标记为不再生成
+        lastMessage.isGenerating = false
+      }
+    }
   } finally {
     generating.value = false
   }
@@ -526,6 +598,48 @@ const handleSend = async (e?: KeyboardEvent) => {
   scrollToBottom()
 
   await generateCode(msg)
+}
+
+// 下载代码
+const handleDownloadCode = async () => {
+  if (!appInfo.value?.id) return
+
+  downloading.value = true
+  try {
+    const response = await myAxios.get(`/app/download/${appInfo.value.id}`, {
+      responseType: 'blob',
+      timeout: 300000, // 5分钟超时，用于处理大文件下载
+    })
+
+    // 从响应头获取文件名
+    const contentDisposition = response.headers['content-disposition'] || response.headers['Content-Disposition']
+    let fileName = `${appInfo.value.appName || 'app'}.zip`
+
+    if (contentDisposition) {
+      const fileNameMatch = contentDisposition.match(/filename[^;=\n]*=((['"]).*?\2|[^;\n]*)/)
+      if (fileNameMatch && fileNameMatch[1]) {
+        fileName = fileNameMatch[1].replace(/['"]/g, '')
+      }
+    }
+
+    // 创建下载链接
+    const blob = new Blob([response.data], { type: 'application/zip' })
+    const downloadUrl = window.URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = downloadUrl
+    link.download = fileName
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    window.URL.revokeObjectURL(downloadUrl)
+
+    message.success('代码下载成功！')
+  } catch (error) {
+    console.error('下载代码失败:', error)
+    message.error('下载代码失败，请重试')
+  } finally {
+    downloading.value = false
+  }
 }
 
 // 部署应用
@@ -667,30 +781,31 @@ onMounted(() => {
 .chat-content {
   flex: 1;
   display: flex;
-  gap: 16px;
-  padding: 16px;
+  gap: 8px;
+  padding: 8px;
   overflow: hidden;
 }
 
 .chat-area {
-  flex: 1;
+  flex: 2;
   display: flex;
   flex-direction: column;
   background: white;
   border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .messages-container {
   flex: 1;
-  padding: 24px;
+  padding: 16px;
   overflow-y: auto;
 }
 
 .message-item {
   display: flex;
-  gap: 12px;
-  margin-bottom: 24px;
+  gap: 8px;
+  margin-bottom: 16px;
 }
 
 .user-message {
@@ -738,7 +853,7 @@ onMounted(() => {
 }
 
 .input-area {
-  padding: 16px 24px;
+  padding: 12px 16px;
   border-top: 1px solid #e8e8e8;
 }
 
@@ -749,12 +864,13 @@ onMounted(() => {
 }
 
 .preview-area {
-  flex: 1;
+  flex: 3;
   display: flex;
   flex-direction: column;
   background: white;
   border-radius: 8px;
   overflow: hidden;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.1);
 }
 
 .preview-header {

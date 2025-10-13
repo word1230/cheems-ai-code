@@ -31,7 +31,7 @@ public class FileWriteTool {
             Path path = Paths.get(relativeFilePath);
             if(!path.isAbsolute()){
                 //如果是相对路径就创建基于appid的项目目录
-                String projectDirName = "vue_project" + appId;
+                String projectDirName = "vue_project_" + appId;
                 Path projectRoot = Paths.get(AppConstant.CODE_OUTPUT_ROOT_DIR, projectDirName);
                 path = projectRoot.resolve(relativeFilePath);
             }

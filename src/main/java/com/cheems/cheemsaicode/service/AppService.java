@@ -1,5 +1,6 @@
 package com.cheems.cheemsaicode.service;
 
+import com.cheems.cheemsaicode.model.dto.app.AppAddRequest;
 import com.cheems.cheemsaicode.model.dto.app.AppQueryRequest;
 import com.cheems.cheemsaicode.model.entity.User;
 import com.cheems.cheemsaicode.model.vo.AppVO;
@@ -44,6 +45,9 @@ public interface AppService extends IService<App> {
      * @return
      */
     QueryWrapper getQueryWrapper(AppQueryRequest appQueryRequest);
+
+
+    Long createApp(AppAddRequest request ,User loginUser);
 
 
     Flux<String> chatToGenCode(String userMessage, Long appId, User loginUser);

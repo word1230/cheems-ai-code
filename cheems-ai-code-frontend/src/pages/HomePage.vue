@@ -1,13 +1,13 @@
 <template>
   <div class="home-page">
     <div class="hero-section">
-      <h1 class="main-title">一句话 <span class="highlight">🤖</span> 呈所想</h1>
-      <p class="subtitle">与 AI 对话轻松创建应用和网站</p>
+      <h1 class="main-title">AI 应用生成平台</h1>
+      <p class="subtitle">一句话轻松创建网站应用</p>
 
       <div class="input-section">
         <a-textarea
           v-model:value="userPrompt"
-          placeholder="使用 NoCode 创建一个高效的小工具，帮我计算......"
+          placeholder="帮我创建个人博客网站"
           :auto-size="{ minRows: 3, maxRows: 6 }"
           class="prompt-input"
         />
@@ -20,10 +20,10 @@
       </div>
 
       <div class="quick-tags">
-        <a-tag @click="userPrompt = '波普风电商网页'">波普风电商网页</a-tag>
-        <a-tag @click="userPrompt = '企业网站'">企业网站</a-tag>
-        <a-tag @click="userPrompt = '电商运营后台'">电商运营后台</a-tag>
-        <a-tag @click="userPrompt = '暗黑诺基亚社区'">暗黑诺基亚社区</a-tag>
+        <a-tag @click="userPrompt = '创建一个个人博客网站，包含文章发布、评论、标签分类功能，使用简洁现代的设计风格，支持暗色模式切换'">个人博客网站</a-tag>
+        <a-tag @click="userPrompt = '设计一个企业官网，包含公司介绍、产品展示、联系我们等页面，要求专业大气，响应式设计适配移动端'">企业官网</a-tag>
+        <a-tag @click="userPrompt = '开发一个在线商城，包含商品列表、购物车、订单管理功能，需要用户登录注册，支持商品搜索和筛选'">在线商城</a-tag>
+        <a-tag @click="userPrompt = '制作一个作品集展示网站，展示设计师的作品案例，包含项目详情页、联系方式，要求视觉效果突出'">作品集网站</a-tag>
       </div>
     </div>
 
@@ -31,7 +31,7 @@
       <h2 class="section-title">我的作品</h2>
       <a-spin :spinning="myAppsLoading">
         <div v-if="myAppsList.length > 0" class="apps-grid">
-          <AppCard v-for="app in myAppsList" :key="app.id" :app="app" />
+          <AppCard v-for="app in myAppsList" :key="app.id" :app="app" :user="userMap.get(app.userId!)" />
         </div>
         <a-empty v-else description="暂无应用，快去创建吧" />
       </a-spin>
@@ -45,7 +45,7 @@
       <h2 class="section-title">精选案例</h2>
       <a-spin :spinning="featuredAppsLoading">
         <div v-if="featuredAppsList.length > 0" class="apps-grid">
-          <AppCard v-for="app in featuredAppsList" :key="app.id" :app="app" />
+          <AppCard v-for="app in featuredAppsList" :key="app.id" :app="app" :user="userMap.get(app.userId!)" />
         </div>
         <a-empty v-else description="暂无精选应用" />
       </a-spin>
@@ -58,13 +58,14 @@
 </template>
 
 <script setup lang="ts">
-import { ref, onMounted } from 'vue'
-import { message } from 'ant-design-vue'
-import { useRouter } from 'vue-router'
-import { SendOutlined } from '@ant-design/icons-vue'
-import { addApp, listMyAppVoByPage, listAppVoByPage } from '@/api/appController'
-import { useLoginUserStore } from '@/stores/loginUser'
+import { addApp, listAppVoByPage, listMyAppVoByPage } from '@/api/appController'
+import { getUserVoById } from '@/api/userController'
 import AppCard from '@/components/AppCard.vue'
+import { useLoginUserStore } from '@/stores/loginUser'
+import { SendOutlined } from '@ant-design/icons-vue'
+import { message } from 'ant-design-vue'
+import { onMounted, ref } from 'vue'
+import { useRouter } from 'vue-router'
 
 const router = useRouter()
 const loginUserStore = useLoginUserStore()
@@ -84,6 +85,34 @@ const featuredAppsLoading = ref(false)
 const featuredAppsPage = ref(1)
 const featuredAppsTotal = ref(0)
 
+// 用户信息映射
+const userMap = ref<Map<number, API.UserVO>>(new Map())
+
+// 加载用户信息
+const loadUserInfo = async (userId: number) => {
+  if (userMap.value.has(userId)) {
+    return userMap.value.get(userId)
+  }
+
+  try {
+    const res = await getUserVoById({ id: userId.toString() })
+    if (res.data.code === 0 && res.data.data) {
+      userMap.value.set(userId, res.data.data)
+      return res.data.data
+    }
+  } catch (error) {
+    console.error('加载用户信息失败', error)
+  }
+
+  return null
+}
+
+// 批量加载用户信息
+const loadUsersForApps = async (apps: API.AppVO[]) => {
+  const userIds = [...new Set(apps.map(app => app.userId).filter(Boolean))]
+  await Promise.all(userIds.map(userId => loadUserInfo(userId)))
+}
+
 // 创建应用
 const handleCreateApp = async () => {
   if (!userPrompt.value.trim()) {
@@ -100,9 +129,7 @@ const handleCreateApp = async () => {
   creating.value = true
   try {
     const res = await addApp({
-      appName: userPrompt.value.substring(0, 20),
       initPrompt: userPrompt.value,
-      codeGenType: 'multi_file',
     })
 
     if (res.data.code === 0 && res.data.data) {
@@ -134,13 +161,19 @@ const loadMyApps = async (page: number = 1) => {
     })
 
     if (res.data.code === 0 && res.data.data) {
+      const apps = res.data.data.records || []
+
       if (page === 1) {
-        myAppsList.value = res.data.data.records || []
+        myAppsList.value = apps
       } else {
-        myAppsList.value.push(...(res.data.data.records || []))
+        myAppsList.value.push(...apps)
       }
+
       myAppsTotal.value = res.data.data.totalRow || 0
       myAppsPage.value = page
+
+      // 加载用户信息
+      await loadUsersForApps(apps)
     }
   } catch (error) {
     message.error('加载失败')
@@ -166,13 +199,19 @@ const loadFeaturedApps = async (page: number = 1) => {
     })
 
     if (res.data.code === 0 && res.data.data) {
+      const apps = res.data.data.records || []
+
       if (page === 1) {
-        featuredAppsList.value = res.data.data.records || []
+        featuredAppsList.value = apps
       } else {
-        featuredAppsList.value.push(...(res.data.data.records || []))
+        featuredAppsList.value.push(...apps)
       }
+
       featuredAppsTotal.value = res.data.data.totalRow || 0
       featuredAppsPage.value = page
+
+      // 加载用户信息
+      await loadUsersForApps(apps)
     }
   } catch (error) {
     message.error('加载失败')
@@ -186,27 +225,6 @@ const loadMoreFeaturedApps = () => {
   loadFeaturedApps(featuredAppsPage.value + 1)
 }
 
-// 格式化时间
-const formatTime = (time?: string) => {
-  if (!time) return ''
-  const date = new Date(time)
-  const now = new Date()
-  const diff = now.getTime() - date.getTime()
-
-  const minute = 60 * 1000
-  const hour = 60 * minute
-  const day = 24 * hour
-
-  if (diff < hour) {
-    return Math.floor(diff / minute) + '分钟前'
-  } else if (diff < day) {
-    return Math.floor(diff / hour) + '小时前'
-  } else if (diff < 30 * day) {
-    return Math.floor(diff / day) + '天前'
-  } else {
-    return date.toLocaleDateString()
-  }
-}
 
 onMounted(() => {
   loadMyApps()
@@ -216,17 +234,20 @@ onMounted(() => {
 
 <style scoped>
 .home-page {
-  max-width: 1400px;
-  margin: 0 auto;
-  padding: 40px 20px;
+  min-height: 100vh;
+background: #4e54c8;  /* fallback for old browsers */
+background: -webkit-linear-gradient(to top, #8f94fb, #4e54c8);  /* Chrome 10-25, Safari 5.1-6 */
+background: linear-gradient(to bottom, #8f94fb, #4e54c8); /* W3C, IE 10+/ Edge, Firefox 16+, Chrome 26+, Opera 12+, Safari 7+ */
+
+  margin: 0;
+  padding: 0;
+  position: relative;
 }
 
 .hero-section {
   text-align: center;
-  padding: 60px 0;
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-  border-radius: 16px;
-  margin-bottom: 60px;
+  padding: 60px 20px;
+  margin: 20px 20px;
   color: white;
 }
 
@@ -257,6 +278,16 @@ onMounted(() => {
   font-size: 16px;
   border-radius: 12px;
   margin-bottom: 16px;
+  border: 1px solid rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 0.9);
+  backdrop-filter: blur(10px);
+  transition: all 0.3s ease;
+}
+
+.prompt-input:focus {
+  border-color: rgba(255, 255, 255, 0.6);
+  box-shadow: 0 0 20px rgba(255, 255, 255, 0.3);
+  background: rgba(255, 255, 255, 1);
 }
 
 .input-actions {
@@ -289,14 +320,19 @@ onMounted(() => {
 }
 
 .apps-section {
-  margin-bottom: 60px;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 20px 20px;
+  margin-bottom: 30px;
 }
 
 .section-title {
   font-size: 32px;
   font-weight: 600;
-  margin-bottom: 32px;
-  color: #1a1a1a;
+  margin-bottom: 24px;
+  color: white;
+  text-align: center;
+  text-shadow: 0 2px 4px rgba(0, 0, 0, 0.3);
 }
 
 .apps-grid {

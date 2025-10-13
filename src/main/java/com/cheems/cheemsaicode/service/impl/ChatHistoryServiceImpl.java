@@ -26,7 +26,7 @@ import java.util.Objects;
  */
 @Service
 @Slf4j
-public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatHistory>  implements ChatHistoryService{
+public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatHistory> implements ChatHistoryService {
 
     @Override
     public void saveChatHistory(Long appId, Long userId, String message, MessageTypeEnum messageType) {
@@ -77,36 +77,36 @@ public class ChatHistoryServiceImpl extends ServiceImpl<ChatHistoryMapper, ChatH
     }
 
     @Override
-    public int loadChatHistoryToMemory(Long appId, MessageWindowChatMemory messageWindowChatMemory,int maxCount) {
+    public int loadChatHistoryToMemory(Long appId, MessageWindowChatMemory messageWindowChatMemory, int maxCount) {
 
-       try{
-           QueryWrapper queryWrapper = QueryWrapper.create()
-                   .eq(ChatHistory::getAppId, appId)
-                   .orderBy(ChatHistory::getCreateTime, false)
-                   .limit(1, maxCount);
-           List<ChatHistory> list = this.list(queryWrapper);
-           if (list == null) {
-               return 0;
-           }
+        try {
+            QueryWrapper queryWrapper = QueryWrapper.create()
+                    .eq(ChatHistory::getAppId, appId)
+                    .orderBy(ChatHistory::getCreateTime, false)
+                    .limit(1, maxCount);
+            List<ChatHistory> list = this.list(queryWrapper);
+            if (list == null) {
+                return 0;
+            }
 
-           List<ChatHistory> historyList = list.reversed();
+            List<ChatHistory> historyList = list.reversed();
 
-           int loadCount = 0;
+            int loadCount = 0;
 
-           for (ChatHistory history : historyList) {
-               if (Objects.equals(history.getMessageType(), MessageTypeEnum.USER.getValue())) {
-                   messageWindowChatMemory.add(UserMessage.from(history.getMessage()));
-               } else if (Objects.equals(history.getMessageType(), MessageTypeEnum.AI.getValue()))
-                   messageWindowChatMemory.add(UserMessage.from(history.getMessage()));
+            for (ChatHistory history : historyList) {
+                if (Objects.equals(history.getMessageType(), MessageTypeEnum.USER.getValue())) {
+                    messageWindowChatMemory.add(UserMessage.from(history.getMessage()));
+                } else if (Objects.equals(history.getMessageType(), MessageTypeEnum.AI.getValue()))
+                    messageWindowChatMemory.add(UserMessage.from(history.getMessage()));
 
-               loadCount++;
-           }
-           log.info("成功为appid:{} 加载了{} 条对话", appId, loadCount);
-           return loadCount;
-       }catch (Exception e){
-           log.info("加载对话失败：{}", e.getMessage());
-           return 0;
-       }
+                loadCount++;
+            }
+            log.info("成功为appid:{} 加载了{} 条对话", appId, loadCount);
+            return loadCount;
+        } catch (Exception e) {
+            log.info("加载对话失败：{}", e.getMessage());
+            return 0;
+        }
 
     }
 }

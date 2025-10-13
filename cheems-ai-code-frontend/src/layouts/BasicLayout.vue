@@ -1,11 +1,9 @@
 <template>
   <a-layout class="layout">
     <GlobalHeader />
-    <a-layout-content class="content">
-      <div class="content-wrapper">
+
         <RouterView />
-      </div>
-    </a-layout-content>
+
     <GlobalFooter />
   </a-layout>
 </template>

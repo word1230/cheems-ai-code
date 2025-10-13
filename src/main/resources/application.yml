@@ -25,8 +25,30 @@ server:
       cookie:
         max-age: 2592000
 
+# 腾讯云对象存储配置
+cos:
+  client:
+    host:
+    secretId:
+    secretKey:
+    bucket:
+    region:
 
-
+langchain4j:
+  open-ai:
+    chat-model:
+      api-key: 
+      base-url: 
+      model-name: 
+      log-requests:  true
+      log-responses: true
+    streaming-chat-model:
+      api-key: 
+      base-url: 
+      model-name: 
+      log-requests: true
+      log-responses: true
+    
 # springdoc-openapi????
 springdoc:
   api-docs:
