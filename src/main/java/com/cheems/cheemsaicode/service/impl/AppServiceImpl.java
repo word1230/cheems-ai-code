@@ -134,6 +134,7 @@ public class AppServiceImpl extends ServiceImpl<AppMapper, App> implements AppSe
         chatHistoryService.saveChatHistory(appId, loginUser.getId(), userMessage, MessageTypeEnum.USER);
 
         // 获取生成代码的类型
+
         String codeGenType = app.getCodeGenType();
         CodeGenTypeEnum genType = CodeGenTypeEnum.getEnumByValue(codeGenType);
         ThrowUtils.throwIf(genType == null, ErrorCode.PARAMS_ERROR, "无效的生成代码类型");
