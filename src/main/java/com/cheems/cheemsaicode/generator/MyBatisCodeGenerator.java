@@ -4,6 +4,7 @@ import cn.hutool.core.lang.Dict;
 import cn.hutool.setting.yaml.YamlUtil;
 import com.mybatisflex.codegen.Generator;
 import com.mybatisflex.codegen.config.GlobalConfig;
+import com.mybatisflex.codegen.dialect.impl.PostgreSQLJdbcDialect;
 import com.zaxxer.hikari.HikariDataSource;
 
 import java.util.Map;
@@ -11,7 +12,7 @@ import java.util.Map;
 public class MyBatisCodeGenerator {
 
     // 需要生成的表名
-    private static final String[] TABLE_NAMES = {"chat_history"};
+    private static final String[] TABLE_NAMES = {"user"};
 
     public static void main(String[] args) {
         // 获取数据源信息
@@ -20,17 +21,20 @@ public class MyBatisCodeGenerator {
         String url = String.valueOf(dataSourceConfig.get("url"));
         String username = String.valueOf(dataSourceConfig.get("username"));
         String password = String.valueOf(dataSourceConfig.get("password"));
+
         // 配置数据源
         HikariDataSource dataSource = new HikariDataSource();
         dataSource.setJdbcUrl(url);
         dataSource.setUsername(username);
         dataSource.setPassword(password);
+        dataSource.setDriverClassName("org.postgresql.Driver");
 
         // 创建配置内容
         GlobalConfig globalConfig = createGlobalConfig();
 
         // 通过 datasource 和 globalConfig 创建代码生成器
         Generator generator = new Generator(dataSource, globalConfig);
+        generator.setDialect(new PostgreSQLJdbcDialect());
 
         // 生成代码
         generator.generate();
@@ -49,7 +53,7 @@ public class MyBatisCodeGenerator {
         globalConfig.getStrategyConfig()
                 .setGenerateTable(TABLE_NAMES)
                 // 设置逻辑删除的默认字段名称
-                .setLogicDeleteColumn("isDelete");
+                .setLogicDeleteColumn("is_delete");
 
         // 设置生成 entity 并启用 Lombok
         globalConfig.enableEntity()

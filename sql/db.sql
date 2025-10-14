@@ -1,55 +1,85 @@
-CREATE TABLE `user` (
-                        `id` bigint NOT NULL AUTO_INCREMENT COMMENT '用户id',
-                        `userAccount` varchar(255) CHARACTER SET utf8mb3 NOT NULL COMMENT '用户账号',
-                        `userPassword` varchar(255) CHARACTER SET utf8mb3 NOT NULL COMMENT '用户密码',
-                        `userName` varchar(255) CHARACTER SET utf8mb3 DEFAULT NULL COMMENT '用户名',
-                        `userAvatar` varchar(1024) CHARACTER SET utf8mb3 DEFAULT NULL COMMENT '用户头像',
-                        `userProfile` varchar(512) CHARACTER SET utf8mb3 DEFAULT NULL COMMENT '用户简介',
-                        `userRole` varchar(255) CHARACTER SET utf8mb3 DEFAULT 'user' COMMENT '用户角色',
-                        `editTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '编辑时间',
-                        `createTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '创建时间',
-                        `updateTime` datetime NOT NULL DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP COMMENT '修改时间',
-                        `isDelete` tinyint NOT NULL DEFAULT '0' COMMENT '是否删除  1删除  ',
-                        PRIMARY KEY (`id`),
-                        UNIQUE KEY `uk_userAccount` (`userAccount`),
-                        KEY `idx_userName` (`userName`) USING BTREE
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
+-- 用户表
+CREATE TABLE "user" (
+                        id BIGSERIAL NOT NULL PRIMARY KEY,
+                        user_account VARCHAR(255) NOT NULL,
+                        user_password VARCHAR(255) NOT NULL,
+                        user_name VARCHAR(255) DEFAULT NULL,
+                        user_avatar VARCHAR(1024) DEFAULT NULL,
+                        user_profile VARCHAR(512) DEFAULT NULL,
+                        user_role VARCHAR(255) DEFAULT 'user',
+                        edit_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                        is_delete SMALLINT NOT NULL DEFAULT 0
+);
 
 -- 应用表
-create table app
-(
-    id           bigint auto_increment comment 'id' primary key,
-    appName      varchar(256)                       null comment '应用名称',
-    cover        varchar(512)                       null comment '应用封面',
-    initPrompt   text                               null comment '应用初始化的 prompt',
-    codeGenType  varchar(64)                        null comment '代码生成类型（枚举）',
-    deployKey    varchar(64)                        null comment '部署标识',
-    deployedTime datetime                           null comment '部署时间',
-    priority     int      default 0                 not null comment '优先级',
-    userId       bigint                             not null comment '创建用户id',
-    editTime     datetime default CURRENT_TIMESTAMP not null comment '编辑时间',
-    createTime   datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime   datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    isDelete     tinyint  default 0                 not null comment '是否删除',
-    UNIQUE KEY uk_deployKey (deployKey), -- 确保部署标识唯一
-    INDEX idx_appName (appName),         -- 提升基于应用名称的查询性能
-    INDEX idx_userId (userId)            -- 提升基于用户 ID 的查询性能
-) comment '应用' collate = utf8mb4_unicode_ci;
-
+CREATE TABLE app (
+                     id BIGSERIAL PRIMARY KEY,
+                     app_name VARCHAR(256) NULL,
+                     cover VARCHAR(512) NULL,
+                     init_prompt TEXT NULL,
+                     code_gen_type VARCHAR(64) NULL,
+                     deploy_key VARCHAR(64) NULL,
+                     deployed_time TIMESTAMP NULL,
+                     priority INTEGER NOT NULL DEFAULT 0,
+                     user_id BIGINT NOT NULL,
+                     edit_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                     create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                     update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                     is_delete SMALLINT NOT NULL DEFAULT 0
+);
 
 -- 对话历史表
-create table chat_history
-(
-    id          bigint auto_increment comment 'id' primary key,
-    message     text                               not null comment '消息',
-    messageType varchar(32)                        not null comment 'user/ai',
-    appId       bigint                             not null comment '应用id',
-    userId      bigint                             not null comment '创建用户id',
-    createTime  datetime default CURRENT_TIMESTAMP not null comment '创建时间',
-    updateTime  datetime default CURRENT_TIMESTAMP not null on update CURRENT_TIMESTAMP comment '更新时间',
-    isDelete    tinyint  default 0                 not null comment '是否删除',
-    INDEX idx_appId (appId),                       -- 提升基于应用的查询性能
-    INDEX idx_createTime (createTime),             -- 提升基于时间的查询性能
-    INDEX idx_appId_createTime (appId, createTime) -- 游标查询核心索引
-) comment '对话历史' collate = utf8mb4_unicode_ci;
+CREATE TABLE chat_history (
+                              id BIGSERIAL PRIMARY KEY,
+                              message TEXT NOT NULL,
+                              message_type VARCHAR(32) NOT NULL,
+                              app_id BIGINT NOT NULL,
+                              user_id BIGINT NOT NULL,
+                              create_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                              update_time TIMESTAMP NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                              is_delete SMALLINT NOT NULL DEFAULT 0
+);
+
+-- 创建约束
+ALTER TABLE "user" ADD CONSTRAINT uk_user_account UNIQUE (user_account);
+
+ALTER TABLE app ADD CONSTRAINT uk_deploy_key UNIQUE (deploy_key);
+
+-- 创建索引
+CREATE INDEX idx_user_name ON "user" (user_name);
+
+CREATE INDEX idx_app_name ON app (app_name);
+CREATE INDEX idx_user_id ON app (user_id);
+
+CREATE INDEX idx_app_id ON chat_history (app_id);
+CREATE INDEX idx_create_time ON chat_history (create_time);
+CREATE INDEX idx_app_id_create_time ON chat_history (app_id, create_time);
+
+-- 创建更新时间触发器函数
+CREATE OR REPLACE FUNCTION update_updated_at_column()
+    RETURNS TRIGGER AS $$
+BEGIN
+    NEW.update_time = CURRENT_TIMESTAMP;
+    RETURN NEW;
+END;
+$$ language 'plpgsql';
+
+-- 为 user 表创建更新时间触发器
+CREATE TRIGGER update_user_updated_at
+    BEFORE UPDATE ON "user"
+    FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- 为 app 表创建更新时间触发器
+CREATE TRIGGER update_app_updated_at
+    BEFORE UPDATE ON app
+    FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
+
+-- 为 chat_history 表创建更新时间触发器
+CREATE TRIGGER update_chat_history_updated_at
+    BEFORE UPDATE ON chat_history
+    FOR EACH ROW
+EXECUTE FUNCTION update_updated_at_column();
